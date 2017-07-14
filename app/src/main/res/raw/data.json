@@ -1,0 +1,222 @@
+{
+  "geocoded_waypoints":[
+    {
+      "geocoder_status":"OK",
+      "place_id":"ChIJO1Ou8MEudTER8cvhK2Sv7gI",
+      "types":[
+        "establishment",
+        "gym",
+        "health",
+        "point_of_interest"
+      ]
+    },
+    {
+      "geocoder_status":"OK",
+      "place_id":"ChIJ3eH0BhwvdTERPZpT1PEAOQQ",
+      "types":[
+        "establishment",
+        "point_of_interest",
+        "university"
+      ]
+    }
+  ],
+  "routes":[
+    {
+      "bounds":{
+        "northeast":{
+          "lat":10.7703924,
+          "lng":106.6826486
+        },
+        "southwest":{
+          "lat":10.7628963,
+          "lng":106.6579592
+        }
+      },
+      "copyrights":"Map data ©2017 Google",
+      "legs":[
+        {
+          "distance":{
+            "text":"3.6 km",
+            "value":3633
+          },
+          "duration":{
+            "text":"11 mins",
+            "value":688
+          },
+          "end_address":"227 Nguyễn Văn Cừ, phường 4, Quận 5, Hồ Chí Minh, Vietnam",
+          "end_location":{
+            "lat":10.7628963,
+            "lng":106.6826486
+          },
+          "start_address":"1 Lữ Gia, 15, Quận 11, Hồ Chí Minh, Vietnam",
+          "start_location":{
+            "lat":10.7703873,
+            "lng":106.6579592
+          },
+          "steps":[
+            {
+              "distance":{
+                "text":"21 m",
+                "value":21
+              },
+              "duration":{
+                "text":"1 min",
+                "value":6
+              },
+              "end_location":{
+                "lat":10.7703924,
+                "lng":106.65815
+              },
+              "html_instructions":"Head \u003cb\u003eeast\u003c/b\u003e on \u003cb\u003eLữ Gia\u003c/b\u003e toward \u003cb\u003eLý Thường Kiệt\u003c/b\u003e",
+              "polyline":{
+                "points":"}qv`Ags~iS?I?["
+              },
+              "start_location":{
+                "lat":10.7703873,
+                "lng":106.6579592
+              },
+              "travel_mode":"DRIVING"
+            },
+            {
+              "distance":{
+                "text":"0.8 km",
+                "value":753
+              },
+              "duration":{
+                "text":"2 mins",
+                "value":140
+              },
+              "end_location":{
+                "lat":10.763873,
+                "lng":106.6599854
+              },
+              "html_instructions":"Turn \u003cb\u003eright\u003c/b\u003e at Công Ty Tnhh Thương Mại Dịch Vụ Thiết Bị An Dân onto \u003cb\u003eLý Thường Kiệt\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003ePass by Cửa hàng nón bảo hiểm Andes (on the right)\u003c/div\u003e",
+              "maneuver":"turn-right",
+              "polyline":{
+                "points":"}qv`Amt~iSjAUrAStB[dDo@`@I^I~Ey@`Ce@j@Kb@Qh@Kb@IpFeAf@K"
+              },
+              "start_location":{
+                "lat":10.7703924,
+                "lng":106.65815
+              },
+              "travel_mode":"DRIVING"
+            },
+            {
+              "distance":{
+                "text":"1.0 km",
+                "value":992
+              },
+              "duration":{
+                "text":"4 mins",
+                "value":219
+              },
+              "end_location":{
+                "lat":10.7680399,
+                "lng":106.6679032
+              },
+              "html_instructions":"Turn \u003cb\u003eleft\u003c/b\u003e at Công Ty Tnhh Xây Dựng Thương Mại Tân Phú Thọ onto \u003cb\u003e3 Tháng 2\u003c/b\u003e/\u003cb\u003eBa Tháng Hai\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003eContinue to follow Ba Tháng Hai\u003c/div\u003e\u003cdiv style=\"font-size:0.9em\"\u003ePass by Mắt Kính Hữu Mạnh (on the right)\u003c/div\u003e",
+              "maneuver":"turn-left",
+              "polyline":{
+                "points":"eiu`A}__jSJAYs@IU{@kBO[k@qAI]_@w@Ue@e@cAa@cA]q@s@eBw@gBIUiAcCi@qACOEKEOQ[EIO]sAwC}@uBwAyC"
+              },
+              "start_location":{
+                "lat":10.763873,
+                "lng":106.6599854
+              },
+              "travel_mode":"DRIVING"
+            },
+            {
+              "distance":{
+                "text":"0.7 km",
+                "value":689
+              },
+              "duration":{
+                "text":"2 mins",
+                "value":116
+              },
+              "end_location":{
+                "lat":10.7676735,
+                "lng":106.6741753
+              },
+              "html_instructions":"Turn \u003cb\u003eright\u003c/b\u003e at Công Ty Tnhh Vũ Thái Hòa onto \u003cb\u003eLý Thái Tổ\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003ePass by Namabank - Atm (on the right)\u003c/div\u003e",
+              "maneuver":"turn-right",
+              "polyline":{
+                "points":"gcv`Akq`jSFIBIDODSBq@J}H?gBDgEFoDLcID["
+              },
+              "start_location":{
+                "lat":10.7680399,
+                "lng":106.6679032
+              },
+              "travel_mode":"DRIVING"
+            },
+            {
+              "distance":{
+                "text":"0.8 km",
+                "value":842
+              },
+              "duration":{
+                "text":"2 mins",
+                "value":147
+              },
+              "end_location":{
+                "lat":10.7654891,
+                "lng":106.6814001
+              },
+              "html_instructions":"At the roundabout, take the \u003cb\u003e3rd\u003c/b\u003e exit and stay on \u003cb\u003eLý Thái Tổ\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003ePass by Lotteria Ngo Gia Tu (on the right)\u003c/div\u003e",
+              "maneuver":"roundabout-right",
+              "polyline":{
+                "points":"}`v`AsxajS@?BADABABCBADG@C@C@C@C?C?E?C?CAGACACACCAACCACCA?JUf@yBd@eCF_@H_@nAwF^_BF[TmAh@kCDQbBwHV_B"
+              },
+              "start_location":{
+                "lat":10.7676735,
+                "lng":106.6741753
+              },
+              "travel_mode":"DRIVING"
+            },
+            {
+              "distance":{
+                "text":"0.3 km",
+                "value":336
+              },
+              "duration":{
+                "text":"1 min",
+                "value":60
+              },
+              "end_location":{
+                "lat":10.7628963,
+                "lng":106.6826486
+              },
+              "html_instructions":"At \u003cb\u003eNgã sáu Cộng hoà\u003c/b\u003e, take the \u003cb\u003e2nd\u003c/b\u003e exit onto \u003cb\u003eNguyễn Văn Cừ\u003c/b\u003e\u003cdiv style=\"font-size:0.9em\"\u003ePass by Vendôme Chocolate (on the left)\u003c/div\u003e",
+              "maneuver":"roundabout-right",
+              "polyline":{
+                "points":"isu`AwecjSB@D?FAFADCDCFCDGBI@G@G?GAGAGxK}Cr@S"
+              },
+              "start_location":{
+                "lat":10.7654891,
+                "lng":106.6814001
+              },
+              "travel_mode":"DRIVING"
+            }
+          ],
+          "traffic_speed_entry":[
+
+          ],
+          "via_waypoint":[
+
+          ]
+        }
+      ],
+      "overview_polyline":{
+        "points":"}qv`Ags~iS?e@~Ci@tB[dDo@`AS`J_Bj@Kb@QlAUxGqAJAYs@eAaC{@mBI]_@w@{@iB_AuBkBmEsAyCm@aBK[We@cBuDuCoGJSJc@NoJDoHTsNF[HCPOFO?QGSMKHUlA_G`CwKlAgGbBwHV_BH@ZKLKDQA_@lMqD"
+      },
+      "summary":"Ba Tháng Hai and Lý Thái Tổ",
+      "warnings":[
+
+      ],
+      "waypoint_order":[
+
+      ]
+    }
+  ],
+  "status":"OK"
+}
