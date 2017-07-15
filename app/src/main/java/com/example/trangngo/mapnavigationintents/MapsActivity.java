@@ -10,13 +10,14 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.location.Location;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
+import android.support.v4.view.ViewPager;
 import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.View;
@@ -24,23 +25,22 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import com.directions.route.AbstractRouting;
-import com.directions.route.Route;
-import com.directions.route.RouteException;
-import com.directions.route.Routing;
-import com.directions.route.RoutingListener;
-import com.directions.route.Segment;
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.Language;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Leg;
+import com.akexorcist.googledirection.model.Route;
+import com.example.trangngo.mapnavigationintents.adapter.InstructionsAdapter;
+import com.example.trangngo.mapnavigationintents.model.Instructions;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceLikelihood;
 import com.google.android.gms.location.places.PlaceLikelihoodBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
-import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -49,6 +49,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -59,198 +60,32 @@ import com.google.maps.android.PolyUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements RoutingListener, OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, DirectionCallback {
 
+    private static final int[] COLORS = new int[]{R.color.primary_dark, R.color.primary, R.color.primary_light, R.color.accent, R.color.primary_dark_material_light};
     private static String TAG = "MapsActivity";
-    private GoogleApiClient mGoogleApiClient;
-    private GoogleMap mMap;
-
-    private ProgressDialog progressDialog;
-    private List<Polyline> polylines;
-
     protected LatLng start;
     protected LatLng end;
-
+    List<LatLng> latLngs = new ArrayList<>();
+    boolean re_center = false;
+    private LatLngBounds homePDD = new LatLngBounds(new LatLng(10.7651909, 106.6619211), new LatLng(10.7773018, 106.6999617));
+    private GoogleApiClient mGoogleApiClient;
+    private GoogleMap mMap;
+    private ProgressDialog progressDialog;
+    private List<Polyline> polylines;
     private LatLng myLatLng;
-
     private Location currentLcation;
     private Location newLocation;
     private Marker marker;
-
-    private ArrayList<Route> routes;
-    List<LatLng> latLngs = new ArrayList<>();
-    private FloatingActionButton fabGetDirection;
-    private FloatingActionButton fabStartNavigation;
-    private FloatingActionButton fabRecenter;
-    private CardView cardView;
-    private PlaceAutocompleteFragment autocompleteFragment;
-
-    boolean re_center = false;
-
-    private static final int[] COLORS = new int[]{R.color.primary_dark, R.color.primary, R.color.primary_light, R.color.accent, R.color.primary_dark_material_light};
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        newLocation = new Location("");
-        polylines = new ArrayList<>();
-        routes = new ArrayList<>();
-
-        mGoogleApiClient = new GoogleApiClient
-                .Builder(this)
-                .addApi(Places.GEO_DATA_API)
-                .addApi(Places.PLACE_DETECTION_API)
-                .enableAutoManage(this, this)
-                .build();
-
-        fabGetDirection = (FloatingActionButton) findViewById(R.id.fab_get_direction);
-        fabStartNavigation = (FloatingActionButton) findViewById(R.id.fab_start_navigation);
-        fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
-        cardView = (CardView) findViewById(R.id.card_view);
-
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-
-        autocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(Place place) {
-                // TODO: Get info about the selected place.
-                Log.i(TAG, "Place: " + place.getName());
-                Toast.makeText(MapsActivity.this, "End: " + place.getName(), Toast.LENGTH_SHORT).show();
-                end = place.getLatLng();
-
-            }
-
-            @Override
-            public void onError(Status status) {
-                // TODO: Handle the error.
-                Log.i(TAG, "An error occurred: " + status);
-            }
-        });
-
-        fabGetDirection.setOnClickListener(this);
-        fabStartNavigation.setOnClickListener(this);
-        fabRecenter.setOnClickListener(this);
-
-        //latLngs = PolyUtil.decode("}qv`Ags~iS?e@~Ci@tB[dDo@`AS`J_Bj@Kb@QlAUxGqAJAYs@eAaC{@mBI]_@w@{@iB_AuBkBmEsAyCm@aBK[We@cBuDuCoGJSJc@NoJDoHTsNF[HCPOFO?QGSMKHUlA_G`CwKlAgGbBwHV_BH@ZKLKDQA_@lMqD");
-
-    }
-
-    public void route() {
-
-        Log.d(TAG, "route: ");
-
-        if (start == null) {
-            Toast.makeText(getApplicationContext(), "Can't get LatLng from start place!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (end == null) {
-            Toast.makeText(getApplicationContext(), "Can't get LatLng from end place!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        progressDialog = ProgressDialog.show(this, "Please wait.",
-                "Fetching route information.", true);
-        Routing routing = new Routing.Builder()
-                .travelMode(AbstractRouting.TravelMode.DRIVING)
-                .withListener(MapsActivity.this)
-                .alternativeRoutes(true)
-                .waypoints(start, end)
-                .language("vi")
-                .build();
-        routing.execute();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        registerReceiver(broadcastReceiver, new IntentFilter(GPSService.str_gps_receiver));
-
-    }
-
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        mMap.setPadding(0, 300, 0, 0);
-        try {
-            // Customise the styling of the base map using a JSON object defined
-            // in a raw resource file.
-            boolean success = googleMap.setMapStyle(
-                    MapStyleOptions.loadRawResourceStyle(
-                            this, R.raw.style_json));
-
-            if (!success) {
-                Log.e(TAG, "Style parsing failed.");
-            }
-        } catch (Resources.NotFoundException e) {
-            Log.e(TAG, "Can't find style. Error: ", e);
-        }
-
-        Intent gpsServiceIntent = new Intent(this, GPSService.class);
-        startService(gpsServiceIntent);
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(MapsActivity.this,
-                    Manifest.permission.ACCESS_FINE_LOCATION) || ActivityCompat.shouldShowRequestPermissionRationale(MapsActivity.this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION)) {
-
-            } else {
-                ActivityCompat.requestPermissions(MapsActivity.this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
-                        1);
-            }
-
-            return;
-        }
-
-        mMap.setOnCameraMoveStartedListener(this);
-
-        mMap.setMyLocationEnabled(true);
-
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 1: {
-
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Toast.makeText(MapsActivity.this, "Permission denied to get location", Toast.LENGTH_SHORT).show();
-                }
-                return;
-            }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
-        }
-    }
-
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             double latitude = Double.valueOf(intent.getStringExtra("latutide"));
             double longitude = Double.valueOf(intent.getStringExtra("longitude"));
-            currentLcation= intent.getParcelableExtra("location");
+            currentLcation = intent.getParcelableExtra("location");
             myLatLng = new LatLng(latitude, longitude);
 
-            if(marker == null){
+            if (marker == null) {
                 marker = mMap.addMarker(new MarkerOptions()
                         .position(myLatLng)
                         .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
@@ -258,11 +93,11 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
                 );
             }
             animateMarker(marker, myLatLng, false);
-            if(re_center){
+            if (re_center) {
                 updateCameraBearing(mMap, currentLcation.getBearing());
             }
             boolean isOnPath = false;
-            for(Polyline polyline: polylines) {
+            for (Polyline polyline : polylines) {
                 if (PolyUtil.isLocationOnPath(myLatLng, polyline.getPoints(), false, 50)) {
                     isOnPath = true;
                     break;
@@ -319,9 +154,174 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
 //            preLocation.setLongitude(longitude);
         }
     };
+    private List<Instructions> instructionsList;
+    private ArrayList<Route> routes;
+    private FloatingActionButton fabGetDirection;
+    private FloatingActionButton fabStartNavigation;
+    private FloatingActionButton fabRecenter;
+    private CardView cardView;
+    private PlaceAutocompleteFragment autocompleteFragment;
+    private ViewPager vpInstructions;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        initInstructions();
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        newLocation = new Location("");
+        polylines = new ArrayList<>();
+        routes = new ArrayList<>();
+
+        mGoogleApiClient = new GoogleApiClient
+                .Builder(this)
+                .addApi(Places.GEO_DATA_API)
+                .addApi(Places.PLACE_DETECTION_API)
+                .enableAutoManage(this, this)
+                .build();
+
+        fabGetDirection = (FloatingActionButton) findViewById(R.id.fab_get_direction);
+        fabStartNavigation = (FloatingActionButton) findViewById(R.id.fab_start_navigation);
+        fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
+        //cardView = (CardView) findViewById(R.id.card_view);
+        vpInstructions = (ViewPager) findViewById(R.id.vpInstructions);
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
+        InstructionsAdapter instructionsAdapter = new InstructionsAdapter(this, instructionsList);
+        vpInstructions.setAdapter(instructionsAdapter);
+
+//        autocompleteFragment = (PlaceAutocompleteFragment)
+//                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+//        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+//            @Override
+//            public void onPlaceSelected(Place place) {
+//                // TODO: Get info about the selected place.
+//                Log.i(TAG, "Place: " + place.getName());
+//                Toast.makeText(MapsActivity.this, "End: " + place.getName(), Toast.LENGTH_SHORT).show();
+//                end = place.getLatLng();
+//
+//            }
+//
+//            @Override
+//            public void onError(Status status) {
+//                // TODO: Handle the error.
+//                Log.i(TAG, "An error occurred: " + status);
+//            }
+//        });
+
+        fabGetDirection.setOnClickListener(this);
+        fabStartNavigation.setOnClickListener(this);
+        fabRecenter.setOnClickListener(this);
+
+        //latLngs = PolyUtil.decode("}qv`Ags~iS?e@~Ci@tB[dDo@`AS`J_Bj@Kb@QlAUxGqAJAYs@eAaC{@mBI]_@w@{@iB_AuBkBmEsAyCm@aBK[We@cBuDuCoGJSJc@NoJDoHTsNF[HCPOFO?QGSMKHUlA_G`CwKlAgGbBwHV_BH@ZKLKDQA_@lMqD");
+
+    }
+
+    public void route() {
+
+        Log.d(TAG, "route: ");
+//
+//        if (start == null) {
+//            Toast.makeText(getApplicationContext(), "Can't get LatLng from start place!", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//        if (end == null) {
+//            Toast.makeText(getApplicationContext(), "Can't get LatLng from end place!", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+        progressDialog = ProgressDialog.show(this, "Please wait.",
+                "Fetching route information.", true);
+
+        GoogleDirection.withServerKey("AIzaSyA8FkLNAIyrX6xTkytf05cbKsnaOeOglso")
+                .from(new LatLng(10.76737, 106.661868))
+                .to(new LatLng(10.7773018, 106.6995))
+                .language(Language.VIETNAMESE)
+                .alternativeRoute(true)
+                .execute(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(broadcastReceiver, new IntentFilter(GPSService.str_gps_receiver));
+
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap.setPadding(0, 300, 0, 0);
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.style_json));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
+
+        Intent gpsServiceIntent = new Intent(this, GPSService.class);
+        startService(gpsServiceIntent);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MapsActivity.this,
+                    Manifest.permission.ACCESS_FINE_LOCATION) || ActivityCompat.shouldShowRequestPermissionRationale(MapsActivity.this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION)) {
+
+            } else {
+                ActivityCompat.requestPermissions(MapsActivity.this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
+                        1);
+            }
+
+            return;
+        }
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(homePDD.getCenter(), 1));
+
+        mMap.setOnCameraMoveStartedListener(this);
+
+        mMap.setMyLocationEnabled(true);
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 1: {
+
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                    Toast.makeText(MapsActivity.this, "Permission denied to get location", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
+    }
 
     private void updateCameraBearing(GoogleMap googleMap, float bearing) {
-        if ( googleMap == null) return;
+        if (googleMap == null) return;
         CameraPosition camPos = CameraPosition
                 .builder(
                         googleMap.getCameraPosition() // current Camera
@@ -370,36 +370,8 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
     }
 
     @Override
-    public void onRoutingFailure(RouteException e) {
-        progressDialog.dismiss();
-        if(e != null) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }else {
-            Toast.makeText(this, "Something went wrong, Try again", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    public void onRoutingStart() {
-
-    }
-
-    @Override
-    public void onRoutingSuccess(ArrayList<Route> arrayList, int i) {
-
-        routes.addAll(arrayList);
-        progressDialog.dismiss();
-        drawNavigateDirection(arrayList);
-    }
-
-    @Override
-    public void onRoutingCancelled() {
-
-    }
-
-    @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.v(TAG,connectionResult.toString());
+        Log.v(TAG, connectionResult.toString());
     }
 
     @Override
@@ -410,7 +382,7 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.fab_get_direction: {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
@@ -435,15 +407,15 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
                     }
                 });
             }
-                break;
-            case R.id.fab_start_navigation:{
+            break;
+            case R.id.fab_start_navigation: {
                 updateCameraBearing(mMap, currentLcation.getBearing());
                 fabRecenter.setVisibility(View.VISIBLE);
                 fabGetDirection.setVisibility(View.GONE);
                 fabStartNavigation.setVisibility(View.GONE);
                 cardView.setVisibility(View.GONE);
             }
-                break;
+            break;
             case R.id.fab_recenter:
                 re_center = true;
                 break;
@@ -452,39 +424,52 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
         }
     }
 
-    void drawNavigateDirection(ArrayList<Route> routes){
+    void drawNavigateDirection(List<Route> routes) {
 
-        routes.get(0).getDurationValue();
-        if(polylines.size()>0) {
+        if (polylines.size() > 0) {
             for (Polyline poly : polylines) {
                 poly.remove();
             }
         }
-        for(int i = 0; i < routes.size(); i++){
-
-//            List<Segment> segment = new ArrayList<>();
-//            segment.addAll(routes.get(i).getSegments());
-//            for(int j = 0; j < segment.size(); j++){
-//                Log.d(TAG, "drawNavigateDirection: " + segment.get(j).getInstruction() + ", " + segment.get(j).getDistance() + ", "
-//                + segment.get(j).getLength());
-//            }
-
-            Log.d(TAG, "drawNavigateDirection: " + routes.get(i).getPolyOptions());
-
+        for (int i = 0; i < routes.size(); i++) {
             int colorIndex = i % COLORS.length;
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-            polylineOptions.width(10+i*3);
-            polylineOptions.addAll(routes.get(i).getPoints());
+            polylineOptions.width(10 + i * 3);
+            polylineOptions.addAll(routes.get(i).getOverviewPolyline().getPointList());
             Polyline polyline = mMap.addPolyline(polylineOptions);
-
             polylines.add(polyline);
 
-            Toast.makeText(getApplicationContext(),"Route "+ (i+1) +": distance - "+ routes.get(i).getDistanceValue()+": duration - "+ routes.get(i).getDurationValue(),Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(),"Route "+ (i+1) +": distance - "+ routes.get(i).getDistanceValue()+": duration - "+ routes.get(i).getDurationValue(),Toast.LENGTH_SHORT).show();
 
         }
     }
 
+    void drawNavigateDirection(Route routes, int index) {
+        int colorIndex = index % COLORS.length;
+        PolylineOptions polylineOptions = new PolylineOptions();
+        polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
+        polylineOptions.width(10 + index * 3);
+        polylineOptions.addAll(routes.getOverviewPolyline().getPointList());
+        Polyline polyline = mMap.addPolyline(polylineOptions);
+        polylines.add(polyline);
+
+        //Toast.makeText(getApplicationContext(),"Route "+ (index+1) +": distance - "+ routes.get(index).getDistanceValue()+": duration - "+ routes.get(index).getDurationValue(),Toast.LENGTH_SHORT).show();
+
+    }
+
+    void drawNavigateDirection(List<LatLng> latLngs, int index) {
+        int colorIndex = index % COLORS.length;
+        PolylineOptions polylineOptions = new PolylineOptions();
+        polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
+        polylineOptions.width(10 + index * 3);
+        polylineOptions.addAll(latLngs);
+        Polyline polyline = mMap.addPolyline(polylineOptions);
+        polylines.add(polyline);
+
+        //Toast.makeText(getApplicationContext(),"Route "+ (index+1) +": distance - "+ routes.get(index).getDistanceValue()+": duration - "+ routes.get(index).getDurationValue(),Toast.LENGTH_SHORT).show();
+
+    }
     @Override
     public void onBackPressed() {
         fabGetDirection.setVisibility(View.VISIBLE);
@@ -495,7 +480,42 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
     @Override
     public void onCameraMoveStarted(int i) {
         if (i == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
-            re_center =false;
+            re_center = false;
         }
+    }
+
+    @Override
+    public void onDirectionSuccess(Direction direction, String rawBody) {
+
+        if (direction.isOK()) {
+            Toast.makeText(getApplicationContext(), "Route success", Toast.LENGTH_SHORT).show();
+            //drawNavigateDirection(direction.getRouteList());
+            progressDialog.dismiss();
+            for (Route route : direction.getRouteList()) {
+                List<Leg> leg = route.getLegList();
+                //drawNavigateDirection(route, 1);
+                Log.d(TAG, "onDirectionSuccess: " + route.getLegList());
+                Log.d(TAG, "onDirectionSuccess: start" + start);
+                Log.d(TAG, "onDirectionSuccess: end  " + end);
+
+            }
+            Route route = direction.getRouteList().get(0);
+            List<Leg> legs = route.getLegList();
+            for (Leg leg : route.getLegList()) {
+                drawNavigateDirection(leg.getStepList().get(3).getPolyline().getPointList(), 0);
+            }
+        }
+    }
+
+    @Override
+    public void onDirectionFailure(Throwable t) {
+
+    }
+
+    void initInstructions() {
+        instructionsList = new ArrayList<>();
+        instructionsList.add(new Instructions("300m", "Nguyen Ngoc loc"));
+        instructionsList.add(new Instructions("500m", "3 Thang 2"));
+        instructionsList.add(new Instructions("700m", "Ly Thai To"));
     }
 }

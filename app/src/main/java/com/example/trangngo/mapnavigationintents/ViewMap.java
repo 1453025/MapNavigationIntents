@@ -17,6 +17,7 @@ import com.google.android.gms.maps.model.Marker;
 
 public class ViewMap {
 
+
     public static void animateMarker(GoogleMap mMap, final Marker marker, final LatLng toPosition,
                                      final boolean hideMarker) {
         final Handler handler = new Handler();
