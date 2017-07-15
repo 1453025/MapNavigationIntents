@@ -10,13 +10,13 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.location.Location;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.View;
@@ -24,12 +24,11 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import com.directions.route.AbstractRouting;
-import com.directions.route.Route;
-import com.directions.route.RouteException;
-import com.directions.route.Routing;
-import com.directions.route.RoutingListener;
-import com.directions.route.Segment;
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.constant.Language;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Route;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -53,42 +52,110 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements RoutingListener, OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, DirectionCallback {
 
+    private static final int[] COLORS = new int[]{R.color.primary_dark, R.color.primary, R.color.primary_light, R.color.accent, R.color.primary_dark_material_light};
     private static String TAG = "MapsActivity";
-    private GoogleApiClient mGoogleApiClient;
-    private GoogleMap mMap;
-
-    private ProgressDialog progressDialog;
-    private List<Polyline> polylines;
-
     protected LatLng start;
     protected LatLng end;
-
+    List<LatLng> latLngs = new ArrayList<>();
+    boolean re_center = false;
+    private GoogleApiClient mGoogleApiClient;
+    private GoogleMap mMap;
+    private ProgressDialog progressDialog;
+    private List<Polyline> polylines;
     private LatLng myLatLng;
-
     private Location currentLcation;
     private Location newLocation;
     private Marker marker;
+    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            double latitude = Double.valueOf(intent.getStringExtra("latutide"));
+            double longitude = Double.valueOf(intent.getStringExtra("longitude"));
+            currentLcation = intent.getParcelableExtra("location");
+            myLatLng = new LatLng(latitude, longitude);
 
+            if (marker == null) {
+                marker = mMap.addMarker(new MarkerOptions()
+                        .position(myLatLng)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
+                        .anchor(0.5f, 0.5f)
+                );
+            }
+            animateMarker(marker, myLatLng, false);
+            if (re_center) {
+                updateCameraBearing(mMap, currentLcation.getBearing());
+            }
+            boolean isOnPath = false;
+            for (Polyline polyline : polylines) {
+                if (PolyUtil.isLocationOnPath(myLatLng, polyline.getPoints(), false, 50)) {
+                    isOnPath = true;
+                    break;
+                }
+            }
+
+            if (!isOnPath) {
+                Log.d(TAG, "false");
+            }
+
+//                if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//                    // TODO: Consider calling
+//                    //    ActivityCompat#requestPermissions
+//                    // here to request the missing permissions, and then overriding
+//                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+//                    //                                          int[] grantResults)
+//                    // to handle the case where the user grants the permission. See the documentation
+//                    // for ActivityCompat#requestPermissions for more details.
+//                    return;
+//                }
+//                com.google.android.gms.common.api.PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi
+//                        .getCurrentPlace(mGoogleApiClient, null);
+//                result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
+//                    @Override
+//                    public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
+//                        if (!likelyPlaces.getStatus().isSuccess()) {
+//                            // Request did not complete successfully
+//                            Log.e(TAG, "Place query did not complete. Error: " + likelyPlaces.getStatus().toString());
+//                            likelyPlaces.release();
+//                            return;
+//                        }
+//                        // Get the Place object from the buffer.
+//                        final PlaceLikelihood place = likelyPlaces.get(0);
+//                        Toast.makeText(MapsActivity.this, "Start: " + place.getPlace().toString(), Toast.LENGTH_SHORT).show();
+//                        start = place.getPlace().getLatLng();
+//                        route();
+//
+//                    }
+//                });
+//            if(preLocation==null){
+//                preLocation = new Location("");
+//                preLocation.setLatitude(latitude);
+//                preLocation.setLongitude(longitude);
+//            }
+//            newLocation.setLatitude(latitude);
+//            newLocation.setLongitude(longitude);
+//
+//
+//            //marker.setPosition(mineLatLng);
+
+//
+//            goToLocation(mineLatLng,18,60,preLocation.bearingTo(newLocation));
+//            preLocation.setLatitude(latitude);
+//            preLocation.setLongitude(longitude);
+        }
+    };
     private ArrayList<Route> routes;
-    List<LatLng> latLngs = new ArrayList<>();
     private FloatingActionButton fabGetDirection;
     private FloatingActionButton fabStartNavigation;
     private FloatingActionButton fabRecenter;
     private CardView cardView;
     private PlaceAutocompleteFragment autocompleteFragment;
-
-    boolean re_center = false;
-
-    private static final int[] COLORS = new int[]{R.color.primary_dark, R.color.primary, R.color.primary_light, R.color.accent, R.color.primary_dark_material_light};
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,14 +224,13 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
         }
         progressDialog = ProgressDialog.show(this, "Please wait.",
                 "Fetching route information.", true);
-        Routing routing = new Routing.Builder()
-                .travelMode(AbstractRouting.TravelMode.DRIVING)
-                .withListener(MapsActivity.this)
-                .alternativeRoutes(true)
-                .waypoints(start, end)
-                .language("vi")
-                .build();
-        routing.execute();
+
+        GoogleDirection.withServerKey("AIzaSyA8FkLNAIyrX6xTkytf05cbKsnaOeOglso")
+                .from(start)
+                .to(end)
+                .language(Language.VIETNAMESE)
+                .alternativeRoute(true)
+                .execute(this);
     }
 
     @Override
@@ -173,7 +239,6 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
         registerReceiver(broadcastReceiver, new IntentFilter(GPSService.str_gps_receiver));
 
     }
-
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -242,84 +307,6 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
         }
     }
 
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            double latitude = Double.valueOf(intent.getStringExtra("latutide"));
-            double longitude = Double.valueOf(intent.getStringExtra("longitude"));
-            currentLcation= intent.getParcelableExtra("location");
-            myLatLng = new LatLng(latitude, longitude);
-
-            if(marker == null){
-                marker = mMap.addMarker(new MarkerOptions()
-                        .position(myLatLng)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
-                        .anchor(0.5f, 0.5f)
-                );
-            }
-            animateMarker(marker, myLatLng, false);
-            if(re_center){
-                updateCameraBearing(mMap, currentLcation.getBearing());
-            }
-            boolean isOnPath = false;
-            for(Polyline polyline: polylines) {
-                if (PolyUtil.isLocationOnPath(myLatLng, polyline.getPoints(), false, 50)) {
-                    isOnPath = true;
-                    break;
-                }
-            }
-
-            if (!isOnPath) {
-                Log.d(TAG, "false");
-            }
-
-//                if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//                    // TODO: Consider calling
-//                    //    ActivityCompat#requestPermissions
-//                    // here to request the missing permissions, and then overriding
-//                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//                    //                                          int[] grantResults)
-//                    // to handle the case where the user grants the permission. See the documentation
-//                    // for ActivityCompat#requestPermissions for more details.
-//                    return;
-//                }
-//                com.google.android.gms.common.api.PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi
-//                        .getCurrentPlace(mGoogleApiClient, null);
-//                result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
-//                    @Override
-//                    public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
-//                        if (!likelyPlaces.getStatus().isSuccess()) {
-//                            // Request did not complete successfully
-//                            Log.e(TAG, "Place query did not complete. Error: " + likelyPlaces.getStatus().toString());
-//                            likelyPlaces.release();
-//                            return;
-//                        }
-//                        // Get the Place object from the buffer.
-//                        final PlaceLikelihood place = likelyPlaces.get(0);
-//                        Toast.makeText(MapsActivity.this, "Start: " + place.getPlace().toString(), Toast.LENGTH_SHORT).show();
-//                        start = place.getPlace().getLatLng();
-//                        route();
-//
-//                    }
-//                });
-//            if(preLocation==null){
-//                preLocation = new Location("");
-//                preLocation.setLatitude(latitude);
-//                preLocation.setLongitude(longitude);
-//            }
-//            newLocation.setLatitude(latitude);
-//            newLocation.setLongitude(longitude);
-//
-//
-//            //marker.setPosition(mineLatLng);
-
-//
-//            goToLocation(mineLatLng,18,60,preLocation.bearingTo(newLocation));
-//            preLocation.setLatitude(latitude);
-//            preLocation.setLongitude(longitude);
-        }
-    };
-
     private void updateCameraBearing(GoogleMap googleMap, float bearing) {
         if ( googleMap == null) return;
         CameraPosition camPos = CameraPosition
@@ -367,34 +354,6 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
                 }
             }
         });
-    }
-
-    @Override
-    public void onRoutingFailure(RouteException e) {
-        progressDialog.dismiss();
-        if(e != null) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }else {
-            Toast.makeText(this, "Something went wrong, Try again", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    public void onRoutingStart() {
-
-    }
-
-    @Override
-    public void onRoutingSuccess(ArrayList<Route> arrayList, int i) {
-
-        routes.addAll(arrayList);
-        progressDialog.dismiss();
-        drawNavigateDirection(arrayList);
-    }
-
-    @Override
-    public void onRoutingCancelled() {
-
     }
 
     @Override
@@ -454,35 +413,34 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
 
     void drawNavigateDirection(ArrayList<Route> routes){
 
-        routes.get(0).getDurationValue();
-        if(polylines.size()>0) {
-            for (Polyline poly : polylines) {
-                poly.remove();
-            }
-        }
-        for(int i = 0; i < routes.size(); i++){
-
-//            List<Segment> segment = new ArrayList<>();
-//            segment.addAll(routes.get(i).getSegments());
-//            for(int j = 0; j < segment.size(); j++){
-//                Log.d(TAG, "drawNavigateDirection: " + segment.get(j).getInstruction() + ", " + segment.get(j).getDistance() + ", "
-//                + segment.get(j).getLength());
+//        if(polylines.size()>0) {
+//            for (Polyline poly : polylines) {
+//                poly.remove();
 //            }
-
-            Log.d(TAG, "drawNavigateDirection: " + routes.get(i).getPolyOptions());
-
-            int colorIndex = i % COLORS.length;
-            PolylineOptions polylineOptions = new PolylineOptions();
-            polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-            polylineOptions.width(10+i*3);
-            polylineOptions.addAll(routes.get(i).getPoints());
-            Polyline polyline = mMap.addPolyline(polylineOptions);
-
-            polylines.add(polyline);
-
-            Toast.makeText(getApplicationContext(),"Route "+ (i+1) +": distance - "+ routes.get(i).getDistanceValue()+": duration - "+ routes.get(i).getDurationValue(),Toast.LENGTH_SHORT).show();
-
-        }
+//        }
+//        for(int i = 0; i < routes.size(); i++){
+//
+////            List<Segment> segment = new ArrayList<>();
+////            segment.addAll(routes.get(i).getSegments());
+////            for(int j = 0; j < segment.size(); j++){
+////                Log.d(TAG, "drawNavigateDirection: " + segment.get(j).getInstruction() + ", " + segment.get(j).getDistance() + ", "
+////                + segment.get(j).getLength());
+////            }
+//
+//            Log.d(TAG, "drawNavigateDirection: " + routes.get(i).getOverviewPolyline());
+//
+//            int colorIndex = i % COLORS.length;
+//            PolylineOptions polylineOptions = new PolylineOptions();
+//            polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
+//            polylineOptions.width(10+i*3);
+//            polylineOptions.addAll(routes.get(i).getOverviewPolyline());
+//            Polyline polyline = mMap.addPolyline(polylineOptions);
+//
+//            polylines.add(polyline);
+//
+//            Toast.makeText(getApplicationContext(),"Route "+ (i+1) +": distance - "+ routes.get(i).getDistanceValue()+": duration - "+ routes.get(i).getDurationValue(),Toast.LENGTH_SHORT).show();
+//
+//        }
     }
 
     @Override
@@ -497,5 +455,23 @@ public class MapsActivity extends FragmentActivity implements RoutingListener, O
         if (i == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
             re_center =false;
         }
+    }
+
+    @Override
+    public void onDirectionSuccess(Direction direction, String rawBody) {
+
+        if (direction.isOK()) {
+            Toast.makeText(getApplicationContext(), "Route success", Toast.LENGTH_SHORT).show();
+            progressDialog.dismiss();
+            for (Route route : direction.getRouteList()) {
+                //route.getOverviewPolyline();
+                Log.d(TAG, "onDirectionSuccess: " + route.getOverviewPolyline().getRawPointList());
+            }
+        }
+    }
+
+    @Override
+    public void onDirectionFailure(Throwable t) {
+
     }
 }
