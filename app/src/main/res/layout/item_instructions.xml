@@ -5,16 +5,32 @@
     android:layout_height="match_parent"
     android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tvDistance"
+    <LinearLayout
         android:layout_width="100dp"
         android:layout_height="match_parent"
-        android:text="50m" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvManeuver"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:gravity="center"
+            android:text="50m" />
+
+        <TextView
+            android:id="@+id/tvDistance"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="50m" />
+    </LinearLayout>
+
 
     <TextView
         android:id="@+id/tvInstruction"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:gravity="center"
         android:text="PDD Building 162l Pasteur, Ben Nghe" />
 
 </LinearLayout>
