@@ -9,17 +9,17 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
-import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
-
 import com.akexorcist.googledirection.DirectionCallback;
 import com.akexorcist.googledirection.GoogleDirection;
 import com.akexorcist.googledirection.constant.Language;
@@ -35,23 +35,18 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceLikelihood;
 import com.google.android.gms.location.places.PlaceLikelihoodBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.MapStyleOptions;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.*;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
@@ -68,6 +63,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected LatLng end;
     List<LatLng> latLngs = new ArrayList<>();
     boolean re_center = false;
+    boolean isGetMyLocation = false;
     LatLngInterpolator latLngInterpolator = new LatLngInterpolator.Spherical();
     IconGenerator iconFactory;
     List<MarkerOptions> markerOptionsList = new ArrayList<>();
@@ -80,6 +76,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Location currentLcation;
     private Location newLocation;
     private Marker marker;
+    private ArrayList<Marker> markerList;
+    private List<LatLng> latLngList;
+    private List<Step> stepList;
+    private ArrayList<Route> routes;
+    private LatLng myLatLngLocation;
+    private RelativeLayout relativeLayoutOnMap;
+    private RelativeLayout relativeLayoutOnNavigation;
+    private FloatingActionButton fabGetDirection;
+    private FloatingActionButton fabStartNavigation;
+    private PlaceAutocompleteFragment autocompleteFragment;
+    private FloatingActionButton fabRecenter;
+    private ViewPager vpInstructions;
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -88,18 +96,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             currentLcation = intent.getParcelableExtra("location");
             myLatLng = new LatLng(latitude, longitude);
 
-            if (marker == null) {
-                marker = mMap.addMarker(new MarkerOptions()
-                        .position(myLatLng)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
-                        .anchor(0.5f, 0.5f)
-                );
-            }
+            boolean isOnPath = false;
             MarkerAnimation.animateMarkerToGB(marker, myLatLng, latLngInterpolator);
             if (re_center) {
                 updateCameraBearing(mMap, myLatLng, currentLcation.getBearing());
+                for (int i = 0; i < polylineList.size(); i++) {
+                    if (PolyUtil.isLocationOnPath(myLatLng, polylineList.get(i).getPoints(), false, 10)) {
+                        if (vpInstructions.getCurrentItem() != i)
+                            vpInstructions.setCurrentItem(i);
+                        break;
+                    }
+                }
             }
-            boolean isOnPath = false;
+
             for (int i = 0; i < polylineList.size(); i++) {
                 if (PolyUtil.isLocationOnPath(myLatLng, polylineList.get(i).getPoints(), false, 50)) {
                     //if(vpInstructions.getCurrentItem() != )
@@ -113,74 +122,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d(TAG, "false");
             }
 
-//                if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//                    // TODO: Consider calling
-//                    //    ActivityCompat#requestPermissions
-//                    // here to request the missing permissions, and then overriding
-//                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//                    //                                          int[] grantResults)
-//                    // to handle the case where the user grants the permission. See the documentation
-//                    // for ActivityCompat#requestPermissions for more details.
-//                    return;
-//                }
-//                com.google.android.gms.common.api.PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi
-//                        .getCurrentPlace(mGoogleApiClient, null);
-//                result.setResultCallback(new ResultCallback<PlaceLikelihoodBuffer>() {
-//                    @Override
-//                    public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
-//                        if (!likelyPlaces.getStatus().isSuccess()) {
-//                            // Request did not complete successfully
-//                            Log.e(TAG, "Place query did not complete. Error: " + likelyPlaces.getStatus().toString());
-//                            likelyPlaces.release();
-//                            return;
-//                        }
-//                        // Get the Place object from the buffer.
-//                        final PlaceLikelihood place = likelyPlaces.get(0);
-//                        Toast.makeText(MapsActivity.this, "Start: " + place.getPlace().toString(), Toast.LENGTH_SHORT).show();
-//                        start = place.getPlace().getLatLng();
-//                        route();
-//
-//                    }
-//                });
-//            if(preLocation==null){
-//                preLocation = new Location("");
-//                preLocation.setLatitude(latitude);
-//                preLocation.setLongitude(longitude);
-//            }
-//            newLocation.setLatitude(latitude);
-//            newLocation.setLongitude(longitude);
-//
-//
-//            //marker.setPosition(mineLatLng);
 
-//
-//            goToLocation(mineLatLng,18,60,preLocation.bearingTo(newLocation));
-//            preLocation.setLatitude(latitude);
-//            preLocation.setLongitude(longitude);
         }
     };
-    private ArrayList<Marker> markerList;
-    private List<LatLng> latLngList;
-    private List<Step> stepList;
-    private ArrayList<Route> routes;
-    private FloatingActionButton fabGetDirection;
-    private FloatingActionButton fabStartNavigation;
-    private FloatingActionButton fabRecenter;
-    private CardView cardView;
-    private PlaceAutocompleteFragment autocompleteFragment;
-    private ViewPager vpInstructions;
     private HashMap<Integer, Marker> visibleMarkers = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        myLatLngLocation = new LatLng(10.7773018, 06.6993529);
         newLocation = new Location("");
         polylineList = new ArrayList<>();
         routes = new ArrayList<>();
         markerList = new ArrayList<>();
         latLngList = new ArrayList<>();
+        iconFactory = new IconGenerator(this);
+
 
         mGoogleApiClient = new GoogleApiClient
                 .Builder(this)
@@ -189,36 +147,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .enableAutoManage(this, this)
                 .build();
 
+        // register layout and view OnMap
+        relativeLayoutOnMap = (RelativeLayout) findViewById(R.id.relativeLayoutOnMap);
         fabGetDirection = (FloatingActionButton) findViewById(R.id.fab_get_direction);
         fabStartNavigation = (FloatingActionButton) findViewById(R.id.fab_start_navigation);
+        autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+        // register layout and view OnNavtigation
+        relativeLayoutOnNavigation = (RelativeLayout) findViewById(R.id.relativeLayoutOnNavigation);
         fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
-        //cardView = (CardView) findViewById(R.id.card_view);
         vpInstructions = (ViewPager) findViewById(R.id.vpInstructions);
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        iconFactory = new IconGenerator(this);
 
-//        autocompleteFragment = (PlaceAutocompleteFragment)
-//                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        relativeLayoutOnNavigation.setVisibility(View.GONE);
 
-//        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-//            @Override
-//            public void onPlaceSelected(Place place) {
-//                // TODO: Get info about the selected place.
-//                Log.i(TAG, "Place: " + place.getName());
-//                Toast.makeText(MapsActivity.this, "End: " + place.getName(), Toast.LENGTH_SHORT).show();
-//                end = place.getLatLng();
-//
-//            }
-//
-//            @Override
-//            public void onError(Status status) {
-//                // TODO: Handle the error.
-//                Log.i(TAG, "An error occurred: " + status);
-//            }
-//        });
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                Log.i(TAG, "Place: " + place.getName());
+                Toast.makeText(MapsActivity.this, "End: " + place.getName(), Toast.LENGTH_SHORT).show();
+                end = place.getLatLng();
+
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.i(TAG, "An error occurred: " + status);
+            }
+        });
 
         fabGetDirection.setOnClickListener(this);
         fabStartNavigation.setOnClickListener(this);
@@ -240,23 +202,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
-
-        //latLngs = PolyUtil.decode("}qv`Ags~iS?e@~Ci@tB[dDo@`AS`J_Bj@Kb@QlAUxGqAJAYs@eAaC{@mBI]_@w@{@iB_AuBkBmEsAyCm@aBK[We@cBuDuCoGJSJc@NoJDoHTsNF[HCPOFO?QGSMKHUlA_G`CwKlAgGbBwHV_BH@ZKLKDQA_@lMqD");
-
     }
 
     public void route(LatLng from, LatLng to) {
 
         Log.d(TAG, "route: ");
-//
-//        if (start == null) {
-//            Toast.makeText(getApplicationContext(), "Can't get LatLng from start place!", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
-//        if (end == null) {
-//            Toast.makeText(getApplicationContext(), "Can't get LatLng from end place!", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
+
+        if (start == null) {
+            Toast.makeText(getApplicationContext(), "Can't get LatLng from start place!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (end == null) {
+            Toast.makeText(getApplicationContext(), "Can't get LatLng from end place!", Toast.LENGTH_SHORT).show();
+            return;
+        }
         progressDialog = ProgressDialog.show(this, "Please wait.",
                 "Fetching route information.", true);
 
@@ -378,8 +337,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 Toast.LENGTH_SHORT).show();
 
                         start = place.getPlace().getLatLng();
-                        route(new LatLng(10.76737, 106.661868), new LatLng(10.7773018, 106.6995));
-
+                        route(start, end);
                     }
                 });
             }
@@ -451,10 +409,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 }
             }
-//            for (LatLng latLng : step.getPolyline().getPointList()) {
-//                //latLngList.add(latLng);
-//                markerOptionsList.add(new MarkerOptions().position(latLng));
-//            }
         }
     }
 
@@ -465,14 +419,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void showNavigationView() {
-        fabRecenter.setVisibility(View.VISIBLE);
-        vpInstructions.setVisibility(View.VISIBLE);
+        relativeLayoutOnNavigation.setVisibility(View.VISIBLE);
     }
 
     private void hideAllView() {
-        fabGetDirection.setVisibility(View.GONE);
-        fabStartNavigation.setVisibility(View.GONE);
-        //cardView.setVisibility(View.GONE);
+        relativeLayoutOnMap.setVisibility(View.GONE);
     }
 
     private List<Instructions> getInstructionsFromSteps(List<Step> stepList) {
@@ -536,9 +487,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onBackPressed() {
-        fabGetDirection.setVisibility(View.VISIBLE);
-        fabStartNavigation.setVisibility(View.VISIBLE);
-        cardView.setVisibility(View.VISIBLE);
+        relativeLayoutOnNavigation.setVisibility(View.GONE);
+        relativeLayoutOnMap.setVisibility(View.VISIBLE);
+
     }
 
     @Override
@@ -608,17 +559,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onCameraMove() {
-
         showVisibleMarker();
-
     }
 
     private void showVisibleMarker() {
-        Log.d(TAG, "showVisibleMarker: markerLits" + markerList.size());
-        if (mMap != null && markerList != null) {
-            addItemsToMap(markerOptionsList);
-        }
-
+        LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+        //new ShowMarker().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, bounds);
+        addItemsToMap(markerOptionsList);
     }
 
     //Your "Item" class will need at least a unique id, latitude and longitude.
@@ -644,7 +591,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (visibleMarkers.containsKey(i)) {
                         //1. Remove the Marker from the GoogleMap
                         visibleMarkers.get(i).remove();
-
                         //2. Remove the reference to the Marker from the HashMap
                         visibleMarkers.remove(i);
                     }
@@ -652,5 +598,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     }
+
+
+    class ShowMarker extends AsyncTask<LatLngBounds, Integer, Void> {
+
+        @Override
+        protected void onPreExecute() {
+            for (Marker marker : markerList) {
+                marker.remove();
+            }
+            markerList.clear();
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            markerList.add(mMap.addMarker(markerOptionsList.get(values[0])));
+        }
+
+        @Override
+        protected Void doInBackground(LatLngBounds... latLngBounds) {
+
+            for (int i = 0; i < markerOptionsList.size(); i++) {
+                //If the item is within the the bounds of the screen
+                if (latLngBounds[0].contains(markerOptionsList.get(i).getPosition())) {
+                    //If the item isn't already being displayed
+                    publishProgress(i);
+
+                }
+                //If the marker is off screen
+            }
+
+
+            return null;
+        }
+    }
+
 }
 
