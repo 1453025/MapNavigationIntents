@@ -1,4 +1,4 @@
-package com.example.trangngo.mapnavigationintents.Utils;
+package com.example.trangngo.mapnavigationintents.Navigation.utils;
 
 import android.Manifest;
 import android.app.Dialog;
@@ -10,6 +10,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
+
 import com.example.trangngo.mapnavigationintents.R;
 
 /**

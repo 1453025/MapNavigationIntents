@@ -1,4 +1,4 @@
-package com.example.trangngo.mapnavigationintents;
+package com.example.trangngo.mapnavigationintents.Navigation;
 
 import android.location.Location;
 

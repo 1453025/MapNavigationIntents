@@ -54,7 +54,7 @@ public class GPSService extends Service {
     public void onCreate() {
         super.onCreate();
         intent = new Intent(str_gps_receiver);
-        Log.d(TAG, "service start");
+        Log.d(TAG, "service fromPosition");
     }
 
     @Override

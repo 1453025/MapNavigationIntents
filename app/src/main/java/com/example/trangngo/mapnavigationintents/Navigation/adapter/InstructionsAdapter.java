@@ -1,4 +1,4 @@
-package com.example.trangngo.mapnavigationintents.adapter;
+package com.example.trangngo.mapnavigationintents.Navigation.adapter;
 
 import android.content.Context;
 import android.os.Build;
@@ -10,8 +10,8 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.example.trangngo.mapnavigationintents.R;
-import com.example.trangngo.mapnavigationintents.model.Instructions;
 
 import java.util.List;
 

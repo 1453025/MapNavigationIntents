@@ -1,7 +1,7 @@
 /* Copyright 2013 Google Inc.
    Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0.html */
 
-package com.example.trangngo.mapnavigationintents.animatedmarker;
+package com.example.trangngo.mapnavigationintents.Navigation.animatedmarker;
 
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;

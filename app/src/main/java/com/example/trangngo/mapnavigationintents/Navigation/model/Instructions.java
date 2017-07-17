@@ -1,4 +1,4 @@
-package com.example.trangngo.mapnavigationintents.model;
+package com.example.trangngo.mapnavigationintents.Navigation.model;
 
 import com.google.android.gms.maps.model.LatLng;
 

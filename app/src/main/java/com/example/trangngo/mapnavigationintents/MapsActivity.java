@@ -19,18 +19,15 @@ import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
-import com.akexorcist.googledirection.DirectionCallback;
-import com.akexorcist.googledirection.GoogleDirection;
-import com.akexorcist.googledirection.constant.Language;
-import com.akexorcist.googledirection.model.Direction;
-import com.akexorcist.googledirection.model.Leg;
+
 import com.akexorcist.googledirection.model.Route;
 import com.akexorcist.googledirection.model.Step;
-import com.example.trangngo.mapnavigationintents.adapter.InstructionsAdapter;
-import com.example.trangngo.mapnavigationintents.animatedmarker.LatLngInterpolator;
-import com.example.trangngo.mapnavigationintents.animatedmarker.MarkerAnimation;
-import com.example.trangngo.mapnavigationintents.fragment.FragmentNavigation;
-import com.example.trangngo.mapnavigationintents.model.Instructions;
+import com.example.trangngo.mapnavigationintents.Navigation.adapter.InstructionsAdapter;
+import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.LatLngInterpolator;
+import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.MarkerAnimation;
+import com.example.trangngo.mapnavigationintents.Navigation.fragment.NavigationFragment;
+import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
+import com.example.trangngo.mapnavigationintents.Navigation.utils.Key;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -46,7 +43,15 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.*;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
@@ -55,12 +60,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, DirectionCallback, GoogleMap.OnCameraMoveListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener, View.OnClickListener, GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraMoveListener {
 
     private static final int[] COLORS = new int[]{R.color.primary_dark, R.color.primary, R.color.primary_light, R.color.accent, R.color.primary_dark_material_light};
+    private final static String TAG_FRAGMENT = "TAG_FRAGMENT";
     private static String TAG = "MapsActivity";
-    protected LatLng start;
-    protected LatLng end;
+    protected LatLng fromPosition;
+    protected LatLng toPosition;
     List<LatLng> latLngs = new ArrayList<>();
     boolean re_center = false;
     boolean isGetMyLocation = false;
@@ -172,7 +178,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // TODO: Get info about the selected place.
                 Log.i(TAG, "Place: " + place.getName());
                 Toast.makeText(MapsActivity.this, "End: " + place.getName(), Toast.LENGTH_SHORT).show();
-                end = place.getLatLng();
+                toPosition = place.getLatLng();
 
             }
 
@@ -186,46 +192,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         fabGetDirection.setOnClickListener(this);
         fabStartNavigation.setOnClickListener(this);
 //        fabRecenter.setOnClickListener(this);
-//        vpInstructions.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-//            @Override
-//            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-//
-//            }
-//
-//            @Override
-//            public void onPageSelected(int position) {
-//                Toast.makeText(MapsActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
-//                changeCameraPreview(position);
-//            }
-//
-//            @Override
-//            public void onPageScrollStateChanged(int state) {
-//
-//            }
-//        });
-    }
 
-    public void route(LatLng from, LatLng to) {
-
-        Log.d(TAG, "route: ");
-
-        if (start == null) {
-            Toast.makeText(getApplicationContext(), "Can't get LatLng from start place!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (end == null) {
-            Toast.makeText(getApplicationContext(), "Can't get LatLng from end place!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        progressDialog = ProgressDialog.show(this, "Please wait.",
-                "Fetching route information.", true);
-
-        GoogleDirection.withServerKey("AIzaSyA8FkLNAIyrX6xTkytf05cbKsnaOeOglso")
-                .from(from)
-                .to(to)
-                .language(Language.VIETNAMESE)
-                .alternativeRoute(true)
-                .execute(this);
     }
 
     @Override
@@ -336,8 +303,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         final PlaceLikelihood place = likelyPlaces.get(0);
                         Toast.makeText(MapsActivity.this, "Start: " + place.getPlace().toString(),
                                 Toast.LENGTH_SHORT).show();
-                        start = place.getPlace().getLatLng();
-                        route(start, end);
+                        fromPosition = place.getPlace().getLatLng();
+
+                        Bundle bundle = new Bundle();
+                        bundle.putParcelable(Key.FROM_POSITION, fromPosition);
+                        bundle.putParcelable(Key.TO_POSITION, toPosition);
+
+                        NavigationFragment navigationFragment = NavigationFragment.getInstance();
+                        navigationFragment.setArguments(bundle);
+                        getFragmentManager().beginTransaction()
+                                .add(R.id.fragment_navigation, navigationFragment, TAG_FRAGMENT)
+                                .addToBackStack(null)
+                                .commit();
                     }
                 });
             }
@@ -355,12 +332,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startNavigation() {
-
-        FragmentNavigation fragmentNavigation = new FragmentNavigation();
-        getFragmentManager().beginTransaction().add(R.id.fragment_navigation, fragmentNavigation).commit();
-        List<Instructions> intructionsList = getInstructionsFromSteps(stepList);
         hideAllView();
         showNavigationView();
+        List<Instructions> intructionsList = getInstructionsFromSteps(stepList);
         setAdapterViewInstructions(intructionsList);
         updateCameraBearing(mMap, myLatLng, currentLcation.getBearing());
         // hide blue dot
@@ -417,7 +391,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setAdapterViewInstructions(List<Instructions> intructionsList) {
         InstructionsAdapter instructionsAdapter = new InstructionsAdapter(this, intructionsList);
-//        vpInstructions.setAdapter(instructionsAdapter);
+        //       vpInstructions.setAdapter(instructionsAdapter);
 
     }
 
@@ -475,23 +449,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    void drawNavigateDirection(List<LatLng> latLngs, int index) {
-        int colorIndex = index % COLORS.length;
-        PolylineOptions polylineOptions = new PolylineOptions();
-        polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-        polylineOptions.width(10 + index * 3);
-        polylineOptions.addAll(latLngs);
-        Polyline polyline = mMap.addPolyline(polylineOptions);
-        polylineList.add(polyline);
-
-        //Toast.makeText(getApplicationContext(),"Route "+ (index+1) +": distance - "+ routes.get(index).getDistanceValue()+": duration - "+ routes.get(index).getDurationValue(),Toast.LENGTH_SHORT).show();
-
-    }
-
     @Override
     public void onBackPressed() {
         //relativeLayoutOnNavigation.setVisibility(View.GONE);
-        relativeLayoutOnMap.setVisibility(View.VISIBLE);
+        //relativeLayoutOnMap.setVisibility(View.VISIBLE);
+
+        if (getFragmentManager().getBackStackEntryCount() > 0) {
+            getFragmentManager().popBackStack();
+        } else {
+            super.onBackPressed();
+        }
 
     }
 
@@ -500,32 +467,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (i == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
             re_center = false;
         }
-    }
-
-    @Override
-    public void onDirectionSuccess(Direction direction, String rawBody) {
-
-        if (direction.isOK()) {
-            Toast.makeText(getApplicationContext(), "Route success", Toast.LENGTH_SHORT).show();
-            //drawNavigateDirection(direction.getRouteList());
-            progressDialog.dismiss();
-            for (Route route : direction.getRouteList()) {
-                List<Leg> leg = route.getLegList();
-            }
-            Route route = direction.getRouteList().get(0);
-            List<Leg> legs = route.getLegList();
-            for (Leg leg : route.getLegList()) {
-                stepList = leg.getStepList();
-                for (int i = 0; i < leg.getStepList().size(); i++) {
-                    drawNavigateDirection(leg.getStepList().get(i).getPolyline().getPointList(), 2);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void onDirectionFailure(Throwable t) {
-
     }
 
     private void changeCameraPreview(int position) {
