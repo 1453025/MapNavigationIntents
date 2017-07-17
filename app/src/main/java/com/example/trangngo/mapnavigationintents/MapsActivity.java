@@ -15,7 +15,6 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -30,6 +29,7 @@ import com.akexorcist.googledirection.model.Step;
 import com.example.trangngo.mapnavigationintents.adapter.InstructionsAdapter;
 import com.example.trangngo.mapnavigationintents.animatedmarker.LatLngInterpolator;
 import com.example.trangngo.mapnavigationintents.animatedmarker.MarkerAnimation;
+import com.example.trangngo.mapnavigationintents.fragment.FragmentNavigation;
 import com.example.trangngo.mapnavigationintents.model.Instructions;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -76,18 +76,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Location currentLcation;
     private Location newLocation;
     private Marker marker;
-    private ArrayList<Marker> markerList;
-    private List<LatLng> latLngList;
-    private List<Step> stepList;
-    private ArrayList<Route> routes;
-    private LatLng myLatLngLocation;
-    private RelativeLayout relativeLayoutOnMap;
-    private RelativeLayout relativeLayoutOnNavigation;
-    private FloatingActionButton fabGetDirection;
-    private FloatingActionButton fabStartNavigation;
-    private PlaceAutocompleteFragment autocompleteFragment;
-    private FloatingActionButton fabRecenter;
-    private ViewPager vpInstructions;
+    //    private FloatingActionButton fabRecenter;
+//    private ViewPager vpInstructions;
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -97,13 +87,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             myLatLng = new LatLng(latitude, longitude);
 
             boolean isOnPath = false;
-            MarkerAnimation.animateMarkerToGB(marker, myLatLng, latLngInterpolator);
+            if (marker != null)
+                MarkerAnimation.animateMarkerToGB(marker, myLatLng, latLngInterpolator);
             if (re_center) {
                 updateCameraBearing(mMap, myLatLng, currentLcation.getBearing());
                 for (int i = 0; i < polylineList.size(); i++) {
                     if (PolyUtil.isLocationOnPath(myLatLng, polylineList.get(i).getPoints(), false, 10)) {
-                        if (vpInstructions.getCurrentItem() != i)
-                            vpInstructions.setCurrentItem(i);
+//                        if (vpInstructions.getCurrentItem() != i)
+//                            vpInstructions.setCurrentItem(i);
                         break;
                     }
                 }
@@ -125,6 +116,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
     };
+    private ArrayList<Marker> markerList;
+    private List<LatLng> latLngList;
+    private List<Step> stepList;
+    private ArrayList<Route> routes;
+    private LatLng myLatLngLocation;
+    private RelativeLayout relativeLayoutOnMap;
+    //private RelativeLayout relativeLayoutOnNavigation;
+    private FloatingActionButton fabGetDirection;
+    private FloatingActionButton fabStartNavigation;
+    private PlaceAutocompleteFragment autocompleteFragment;
     private HashMap<Integer, Marker> visibleMarkers = new HashMap<>();
 
     @Override
@@ -155,15 +156,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
 
         // register layout and view OnNavtigation
-        relativeLayoutOnNavigation = (RelativeLayout) findViewById(R.id.relativeLayoutOnNavigation);
-        fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
-        vpInstructions = (ViewPager) findViewById(R.id.vpInstructions);
+        //relativeLayoutOnNavigation = (RelativeLayout) findViewById(R.id.relativeLayoutOnNavigation);
+//        fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
+//        vpInstructions = (ViewPager) findViewById(R.id.vpInstructions);
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        relativeLayoutOnNavigation.setVisibility(View.GONE);
+        //relativeLayoutOnNavigation.setVisibility(View.GONE);
 
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
@@ -184,24 +185,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         fabGetDirection.setOnClickListener(this);
         fabStartNavigation.setOnClickListener(this);
-        fabRecenter.setOnClickListener(this);
-        vpInstructions.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-                Toast.makeText(MapsActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
-                changeCameraPreview(position);
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-
-            }
-        });
+//        fabRecenter.setOnClickListener(this);
+//        vpInstructions.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+//            @Override
+//            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+//
+//            }
+//
+//            @Override
+//            public void onPageSelected(int position) {
+//                Toast.makeText(MapsActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
+//                changeCameraPreview(position);
+//            }
+//
+//            @Override
+//            public void onPageScrollStateChanged(int state) {
+//
+//            }
+//        });
     }
 
     public void route(LatLng from, LatLng to) {
@@ -335,7 +336,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         final PlaceLikelihood place = likelyPlaces.get(0);
                         Toast.makeText(MapsActivity.this, "Start: " + place.getPlace().toString(),
                                 Toast.LENGTH_SHORT).show();
-
                         start = place.getPlace().getLatLng();
                         route(start, end);
                     }
@@ -355,6 +355,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startNavigation() {
+
+        FragmentNavigation fragmentNavigation = new FragmentNavigation();
+        getFragmentManager().beginTransaction().add(R.id.fragment_navigation, fragmentNavigation).commit();
         List<Instructions> intructionsList = getInstructionsFromSteps(stepList);
         hideAllView();
         showNavigationView();
@@ -414,12 +417,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setAdapterViewInstructions(List<Instructions> intructionsList) {
         InstructionsAdapter instructionsAdapter = new InstructionsAdapter(this, intructionsList);
-        vpInstructions.setAdapter(instructionsAdapter);
+//        vpInstructions.setAdapter(instructionsAdapter);
 
     }
 
     private void showNavigationView() {
-        relativeLayoutOnNavigation.setVisibility(View.VISIBLE);
+        //relativeLayoutOnNavigation.setVisibility(View.VISIBLE);
     }
 
     private void hideAllView() {
@@ -487,7 +490,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onBackPressed() {
-        relativeLayoutOnNavigation.setVisibility(View.GONE);
+        //relativeLayoutOnNavigation.setVisibility(View.GONE);
         relativeLayoutOnMap.setVisibility(View.VISIBLE);
 
     }
