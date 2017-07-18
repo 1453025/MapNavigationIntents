@@ -17,7 +17,7 @@ public interface PresenterToViewCallback {
 
     void drawNavigateDirection(List<LatLng> pointList, int i);
 
-    void moveCameraFollowStep(List<Step> stepList, int index);
+    void moveCameraFollowStep(List<Step> stepList, int position);
 
     void addMarkerVisibleToMap(List<MarkerOptions> arrowMarkerDirectionList,
                                List<MarkerOptions> nameMarkerStreetList,
@@ -30,6 +30,8 @@ public interface PresenterToViewCallback {
     void moveCameraFollowMyLocation(Location myLocation);
 
     void setViewPagerFollowMyLocation(int i);
+
+    void changeColorViewPager(int position);
 
     interface OnRoute {
         void onInputFail();

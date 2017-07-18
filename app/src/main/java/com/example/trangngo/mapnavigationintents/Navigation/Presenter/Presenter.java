@@ -32,7 +32,7 @@ import java.util.List;
 
 public class Presenter implements DirectionCallback {
     private static String TAG = "Presenter";
-    IconGenerator iconFactory;
+    private IconGenerator iconFactory;
 
     private LatLng fromPosition;
     private LatLng toPosition;
@@ -101,7 +101,6 @@ public class Presenter implements DirectionCallback {
         if (direction.isOK()) {
             routeSuccess = true;
             onRoute.onEndRoute(true);
-            //drawNavigateDirection(direction.getRouteList());
 
             init();
             for (Route route : direction.getRouteList()) {
@@ -167,7 +166,7 @@ public class Presenter implements DirectionCallback {
     }
 
 
-    public void makeArrowMakerDirection() {
+    private void makeArrowMakerDirection() {
 
         LatLng tailLatLng;
         LatLng headLatLng;
@@ -202,16 +201,19 @@ public class Presenter implements DirectionCallback {
                                     .rotation(heading.floatValue() - 90);
                             arrowMarkerDirectionList.add(markerOptions);
 
-                            nameMarkerStreetList.add(new MarkerOptions().position(headLatLng).
-                                    anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
+                            nameMarkerStreetList.add(new MarkerOptions().position(headLatLng)
+                                    .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV())
+                                    .icon(BitmapDescriptorFactory
+                                            .fromBitmap(iconFactory.makeIcon(
+                                                    MyUtils.getNameAddressFromLatLng(context, headLatLng.latitude, headLatLng.longitude)))));
                         }
                     }
                 }
 
                 timeMarkerList.add(new MarkerOptions().position(tailLatLng)
                         .icon(BitmapDescriptorFactory
-                                .fromBitmap(iconFactory.makeIcon(step.getDuration().getText()))).
-                                anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
+                                .fromBitmap(iconFactory.makeIcon(step.getDuration().getText())))
+                        .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
             }
 
         }
@@ -222,11 +224,11 @@ public class Presenter implements DirectionCallback {
         this.myLocationListener.setPresenter(this);
     }
 
-    public void setRecenter(boolean recenter) {
-        this.reCenter = recenter;
+    public void setRecenterFalse() {
+        this.reCenter = false;
     }
 
-    public int myLocationIsOnPolyline(LatLng latLng) {
+    private int myLocationIsOnPolyline(LatLng latLng) {
         if (polylineOptionsList == null) {
             return -1;
         }
@@ -236,5 +238,9 @@ public class Presenter implements DirectionCallback {
             }
         }
         return -1;
+    }
+
+    public void changeColorViewPager(int position) {
+        presenterCb.changeColorViewPager(position);
     }
 }

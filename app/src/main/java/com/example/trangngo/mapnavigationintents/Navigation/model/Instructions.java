@@ -8,11 +8,11 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class Instructions {
 
-    String distance;
-    String instructions;
-    String maneuver;
-    LatLng startLatLng;
-    LatLng endLatLng;
+    private String distance;
+    private String instructions;
+    private String maneuver;
+    private LatLng startLatLng;
+    private LatLng endLatLng;
 
     Instructions(InstructionsBuilder builder) {
         this.distance = builder.distance;
@@ -20,25 +20,6 @@ public class Instructions {
         this.maneuver = builder.maneuver;
         this.startLatLng = builder.startLatLng;
         this.endLatLng = builder.endLatLng;
-    }
-
-    public Instructions(String distance, String instructions) {
-        this.distance = distance;
-        this.instructions = instructions;
-    }
-
-    public Instructions(String distance, String instructions, String maneuver) {
-        this.distance = distance;
-        this.instructions = instructions;
-        this.maneuver = maneuver;
-    }
-
-    public Instructions(String distance, String instructions, String maneuver, LatLng startLatLng, LatLng endLatLng) {
-        this.distance = distance;
-        this.instructions = instructions;
-        this.maneuver = maneuver;
-        this.startLatLng = startLatLng;
-        this.endLatLng = endLatLng;
     }
 
     public String getInstructions() {

@@ -21,11 +21,9 @@ import android.widget.Toast;
 
 import com.akexorcist.googledirection.model.Route;
 import com.akexorcist.googledirection.model.Step;
-import com.example.trangngo.mapnavigationintents.Navigation.adapter.InstructionsAdapter;
 import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.LatLngInterpolator;
 import com.example.trangngo.mapnavigationintents.Navigation.fragment.NavigationFragment;
 import com.example.trangngo.mapnavigationintents.Navigation.fragment.listenerimplement.MyLocationListener;
-import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.example.trangngo.mapnavigationintents.Navigation.utils.Key;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -48,7 +46,6 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.ui.IconGenerator;
 
 import java.util.ArrayList;
@@ -68,8 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LatLngInterpolator latLngInterpolator = new LatLngInterpolator.Spherical();
     IconGenerator iconFactory;
     List<MarkerOptions> markerOptionsList = new ArrayList<>();
-    //    private FloatingActionButton fabRecenter;
-//    private ViewPager vpInstructions;
+
     MyLocationListener myLocationListener = new MyLocationListener();
     private LatLngBounds homePDD = new LatLngBounds(new LatLng(10.7651909, 106.6619211), new LatLng(10.7773018, 106.6999617));
     private GoogleApiClient mGoogleApiClient;
@@ -131,16 +127,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
 
-        // register layout and view OnNavtigation
-        //relativeLayoutOnNavigation = (RelativeLayout) findViewById(R.id.relativeLayoutOnNavigation);
-//        fabRecenter = (FloatingActionButton) findViewById(R.id.fab_recenter);
-//        vpInstructions = (ViewPager) findViewById(R.id.vpInstructions);
-
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        //relativeLayoutOnNavigation.setVisibility(View.GONE);
 
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
@@ -279,7 +269,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         bundle.putParcelable(Key.FROM_POSITION, fromPosition);
                         bundle.putParcelable(Key.TO_POSITION, toPosition);
 
-                        NavigationFragment navigationFragment = NavigationFragment.getInstance();
+                        NavigationFragment navigationFragment = new NavigationFragment();
                         navigationFragment.setArguments(bundle);
                         navigationFragment.setListenLocation(myLocationListener);
                         getFragmentManager().beginTransaction()
@@ -301,70 +291,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void setAdapterViewInstructions(List<Instructions> intructionsList) {
-        InstructionsAdapter instructionsAdapter = new InstructionsAdapter(this, intructionsList);
-        //       vpInstructions.setAdapter(instructionsAdapter);
-
-    }
-
-    private void showNavigationView() {
-        //relativeLayoutOnNavigation.setVisibility(View.VISIBLE);
-    }
-
-    private void hideAllView() {
-        relativeLayoutOnMap.setVisibility(View.GONE);
-    }
-
-    private List<Instructions> getInstructionsFromSteps(List<Step> stepList) {
-        List<Instructions> instructionsList = new ArrayList<>();
-        for (Step step : stepList) {
-            Instructions instructions = new Instructions.InstructionsBuilder()
-                    .setInstructions(step.getHtmlInstruction())
-                    .setDistance(step.getDistance().getText())
-                    .setManeuver(step.getManeuver())
-                    .setEndLatLng(step.getEndLocation().getCoordination())
-                    .setStartLatLng(step.getStartLocation().getCoordination())
-                    .build();
-            instructionsList.add(instructions);
-        }
-        return instructionsList;
-    }
-
-    void drawNavigateDirection(List<Route> routes) {
-
-        if (polylineList.size() > 0) {
-            for (Polyline poly : polylineList) {
-                poly.remove();
-            }
-        }
-        for (int i = 0; i < routes.size(); i++) {
-            int colorIndex = i % COLORS.length;
-            PolylineOptions polylineOptions = new PolylineOptions();
-            polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-            polylineOptions.width(10 + i * 3);
-            polylineOptions.addAll(routes.get(i).getOverviewPolyline().getPointList());
-            Polyline polyline = mMap.addPolyline(polylineOptions);
-            polylineList.add(polyline);
-        }
-    }
-
-    void drawNavigateDirection(Route routes, int index) {
-        int colorIndex = index % COLORS.length;
-        PolylineOptions polylineOptions = new PolylineOptions();
-        polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-        polylineOptions.width(10 + index * 3);
-        polylineOptions.addAll(routes.getOverviewPolyline().getPointList());
-        Polyline polyline = mMap.addPolyline(polylineOptions);
-        polylineList.add(polyline);
-
-        //Toast.makeText(getApplicationContext(),"Route "+ (index+1) +": distance - "+ routes.get(index).getDistanceValue()+": duration - "+ routes.get(index).getDurationValue(),Toast.LENGTH_SHORT).show();
-
-    }
-
     @Override
     public void onBackPressed() {
-        //relativeLayoutOnNavigation.setVisibility(View.GONE);
-        //relativeLayoutOnMap.setVisibility(View.VISIBLE);
 
         if (getFragmentManager().getBackStackEntryCount() > 0) {
             getFragmentManager().popBackStack();

@@ -2,15 +2,9 @@ package com.example.trangngo.mapnavigationintents.Navigation.fragment;
 
 import android.app.Fragment;
 import android.app.ProgressDialog;
-import android.content.Context;
-import android.graphics.Color;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
@@ -40,16 +34,12 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Created by trangngo on 7/17/17.
@@ -61,9 +51,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
             R.color.primary_dark,
             R.color.primary,
             R.color.primary_light,
-            R.color.accent,
-            R.color.primary_dark_material_light};
-    private static final NavigationFragment ourInstance = new NavigationFragment();
+            R.color.accent};
     private static String TAG = "Navigation Fragment";
     Presenter presenter;
     ListenerImplement listenerImplement;
@@ -73,7 +61,6 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     LatLngInterpolator latLngInterpolator;
     int index = -1;
     private Marker myLocationMarker;
-    private List<Polyline> polylineList;
     private HashMap<Integer, Marker> arrowMarkerDirection;
     private HashMap<Integer, Marker> nameMarkerStreet;
     private HashMap<Integer, Marker> timeMarker;
@@ -84,15 +71,10 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     private FloatingActionButton fabRecenter;
     private ViewPager vpInstructions;
 
-    public static NavigationFragment getInstance() {
-        return ourInstance;
-    }
-
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        polylineList = new ArrayList<>();
         arrowMarkerDirection = new HashMap<>();
         nameMarkerStreet = new HashMap<>();
         timeMarker = new HashMap<>();
@@ -156,11 +138,6 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     @Override
     public void onEndRoute(boolean success) {
         progressDialog.dismiss();
-        if (success) {
-
-        } else {
-
-        }
     }
 
     @Override
@@ -170,8 +147,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
         polylineOptions.width(10 + i * 3);
         polylineOptions.addAll(pointList);
-        Polyline polyline = mMap.addPolyline(polylineOptions);
-        polylineList.add(polyline);
+        mMap.addPolyline(polylineOptions);
     }
 
     @Override
@@ -209,25 +185,26 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         if (vpInstructions.getCurrentItem() != i) {
             vpInstructions.setCurrentItem(i);
 
-        } else {
+        }
+    }
 
+    @Override
+    public void changeColorViewPager(int position) {
+        if (this.index == position) {
+            vpInstructions.setBackgroundColor(getResources().getColor(R.color.primary));
+        } else {
+            vpInstructions.setBackgroundColor(getResources().getColor(R.color.secondary_text));
         }
     }
 
 
     @Override
-    public void moveCameraFollowStep(List<Step> stepList, int index) {
-        if (index > 0) {
-            Step step = stepList.get(index - 1);
+    public void moveCameraFollowStep(List<Step> stepList, int position) {
+        if (position >= 0) {
+            Step step = stepList.get(position);
             Double heading = SphericalUtil.computeHeading(step.getStartLocation().getCoordination()
                     , step.getEndLocation().getCoordination());
             updateCameraBearing(mMap, step.getEndLocation().getCoordination(), heading.floatValue());
-
-            if (this.index == index) {
-                vpInstructions.setBackgroundColor(Color.WHITE);
-            } else {
-                vpInstructions.setBackgroundColor(Color.GRAY);
-            }
         }
     }
 
@@ -239,7 +216,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
                 .target(latLng)
                 .bearing(bearing)
                 .tilt(45)
-                .zoom(19)
+                .zoom(18)
                 .build();
         googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
     }
@@ -268,10 +245,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
                 if (!nameMarkerStreet.containsKey(i)) {
                     //Add the Marker to the Map and keep track of it with the HashMap
                     //getMarkerForItem just returns a MarkerOptions object
-                    getNameAddressFromLatLng(getActivity()
-                            , nameMarkerStreetList.get(i).getPosition().latitude
-                            , nameMarkerStreetList.get(i).getPosition().longitude
-                            , nameMarkerStreet, nameMarkerStreetList, i);
+                    nameMarkerStreet.put(i, mMap.addMarker(nameMarkerStreetList.get(i)));
                 }
             }
             //If the marker is off screen
@@ -309,47 +283,6 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
                 }
             }
         }
-    }
-
-    public void getNameAddressFromLatLng(final Context context, final double lat, final double lng
-            , final HashMap<Integer, Marker> nameMarkerStreet, final List<MarkerOptions> nameMarkerStreetList, final int i) {
-        LatLng latlng = new LatLng(lat, lng);
-        final Geocoder geocoder;
-        geocoder = new Geocoder(context, Locale.getDefault());
-        AsyncTask<LatLng, Void, String> task = new AsyncTask<LatLng, Void, String>() {
-            @Override
-            protected void onPreExecute() {
-                // Utils.showProgressDialog(context,"");
-                super.onPreExecute();
-            }
-
-            @NonNull
-            @Override
-            protected String doInBackground(LatLng... latLngs) {
-                try {
-                    List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
-                    //DebugLog.loge("name"+addresses.get(0).getAddressLine(0).toString());
-                    if (!addresses.isEmpty()) {
-                        try {
-                            return addresses.get(0).getAddressLine(0).toString();
-                        } catch (Exception e) {
-                            return "Unknow";
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                return "Unknow";
-            }
-
-            @Override
-            protected void onPostExecute(String s) {
-                nameMarkerStreet.put(i, mMap.addMarker(nameMarkerStreetList.get(i)
-                        .icon(BitmapDescriptorFactory.fromBitmap(iconGenerator.makeIcon(s)))));
-            }
-        };
-        task.execute(latlng);
     }
 
     public void setListenLocation(MyLocationListener listenLocation) {

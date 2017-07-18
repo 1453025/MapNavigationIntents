@@ -16,9 +16,9 @@ import static android.support.v4.view.ViewPager.SCROLL_STATE_DRAGGING;
 
 public class ListenerImplement implements ViewPager.OnPageChangeListener, View.OnClickListener
         , GoogleMap.OnCameraMoveStartedListener, GoogleMap.OnCameraMoveListener {
-    static String TAG = "Listener Implement";
-    int state = -1;
-    Presenter presenter;
+    private static String TAG = "Listener Implement";
+    private int state = -1;
+    private Presenter presenter;
 
     public ListenerImplement(Presenter presenter) {
         this.presenter = presenter;
@@ -31,10 +31,12 @@ public class ListenerImplement implements ViewPager.OnPageChangeListener, View.O
     @Override
     public void onPageSelected(int position) {
         if (state == SCROLL_STATE_DRAGGING) {
-            presenter.setRecenter(false);
+            presenter.setRecenterFalse();
             presenter.changeCameraFollowStep(position);
             state = -1;
         }
+
+        presenter.changeColorViewPager(position);
 
     }
 
@@ -48,7 +50,7 @@ public class ListenerImplement implements ViewPager.OnPageChangeListener, View.O
     @Override
     public void onCameraMoveStarted(int i) {
         if (i == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
-            presenter.setRecenter(false);
+            presenter.setRecenterFalse();
         }
     }
 

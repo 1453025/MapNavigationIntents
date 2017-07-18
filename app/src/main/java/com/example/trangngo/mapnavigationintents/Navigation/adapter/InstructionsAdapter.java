@@ -7,7 +7,6 @@ import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
@@ -21,8 +20,8 @@ import java.util.List;
 
 public class InstructionsAdapter extends PagerAdapter {
 
-    List<Instructions> instructionsList;
-    LayoutInflater layoutInflater;
+    private List<Instructions> instructionsList;
+    private LayoutInflater layoutInflater;
 
     public InstructionsAdapter(Context context, List<Instructions> instructionsList) {
         this.instructionsList = instructionsList;
@@ -44,7 +43,6 @@ public class InstructionsAdapter extends PagerAdapter {
     public Object instantiateItem(ViewGroup container, int position) {
         View view = layoutInflater.inflate(R.layout.item_instructions, container, false);
 
-        LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.lnContainer);
         TextView tvManeuver = (TextView) view.findViewById(R.id.tvManeuver);
         TextView tvDistance = (TextView) view.findViewById(R.id.tvDistance);
         TextView tvInstructions = (TextView) view.findViewById(R.id.tvInstruction);

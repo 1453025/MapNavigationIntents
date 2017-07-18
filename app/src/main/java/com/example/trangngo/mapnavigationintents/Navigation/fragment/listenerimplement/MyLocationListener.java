@@ -11,10 +11,11 @@ import com.example.trangngo.mapnavigationintents.Navigation.Presenter.Presenter;
 public class MyLocationListener implements ListenLocationChange {
 
 
-    Presenter presenter;
+    private Presenter presenter;
 
     public void setPresenter(Presenter presenter) {
         this.presenter = presenter;
+
     }
 
     @Override
