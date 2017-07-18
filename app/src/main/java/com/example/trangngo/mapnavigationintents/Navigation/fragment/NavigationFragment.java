@@ -3,11 +3,14 @@ package com.example.trangngo.mapnavigationintents.Navigation.fragment;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
@@ -20,7 +23,10 @@ import com.akexorcist.googledirection.model.Step;
 import com.example.trangngo.mapnavigationintents.Navigation.Presenter.Presenter;
 import com.example.trangngo.mapnavigationintents.Navigation.Presenter.PresenterToViewCallback;
 import com.example.trangngo.mapnavigationintents.Navigation.adapter.InstructionsAdapter;
+import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.LatLngInterpolator;
+import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.MarkerAnimation;
 import com.example.trangngo.mapnavigationintents.Navigation.fragment.listenerimplement.ListenerImplement;
+import com.example.trangngo.mapnavigationintents.Navigation.fragment.listenerimplement.MyLocationListener;
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.example.trangngo.mapnavigationintents.Navigation.utils.Key;
 import com.example.trangngo.mapnavigationintents.R;
@@ -63,11 +69,14 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     ListenerImplement listenerImplement;
     GoogleMap mMap;
     IconGenerator iconGenerator;
+    MyLocationListener myLocationListener;
+    LatLngInterpolator latLngInterpolator;
+    int index = -1;
+    private Marker myLocationMarker;
     private List<Polyline> polylineList;
     private HashMap<Integer, Marker> arrowMarkerDirection;
     private HashMap<Integer, Marker> nameMarkerStreet;
     private HashMap<Integer, Marker> timeMarker;
-
     private ProgressDialog progressDialog;
     private LatLngBounds homePDD = new LatLngBounds(
             new LatLng(10.7651909, 106.6619211),
@@ -89,8 +98,13 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         timeMarker = new HashMap<>();
 
         iconGenerator = new IconGenerator(getActivity());
+        latLngInterpolator = new LatLngInterpolator.Spherical();
 
         presenter = new Presenter(this, this, getActivity());
+
+        if (myLocationListener != null) {
+            presenter.setMyLocationListener(myLocationListener);
+        }
         listenerImplement = new ListenerImplement(presenter);
         LatLng fromPosition = getArguments().getParcelable(Key.FROM_POSITION);
         //LatLng toPosition = getArguments().getParcelable(Key.TO_POSITION);
@@ -118,16 +132,15 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setPadding(200, 500, 200, 200);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(homePDD.getCenter(), 15));
         presenter.route();
-
 
         vpInstructions.addOnPageChangeListener(listenerImplement);
         fabRecenter.setOnClickListener(listenerImplement);
         mMap.setOnCameraMoveStartedListener(listenerImplement);
         mMap.setOnCameraMoveListener(listenerImplement);
     }
-
 
     @Override
     public void onInputFail() {
@@ -168,21 +181,57 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
 
     }
 
+    @Override
+    public void moveMarkerFollowMyLocation(Location location) {
+
+        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        if (myLocationMarker == null) {
+            myLocationMarker = mMap.addMarker(new MarkerOptions().position(latLng)
+                    .flat(true)
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
+                    .anchor(0.5f, 0.5f));
+        }
+        myLocationMarker.setRotation(location.getBearing());
+        MarkerAnimation.animateMarkerToGB(myLocationMarker, latLng, latLngInterpolator);
+    }
 
     @Override
-    public void changeCameraFollowStep(List<Step> stepList, int index) {
-        //addIcon(iconFactory, "Manh", stepList.get(position).getStartLocation().getCoordination());
+    public void moveCameraFollowMyLocation(Location myLocation) {
+        if (myLocation == null)
+            return;
+        LatLng latLng = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+        updateCameraBearing(mMap, latLng, myLocation.getBearing());
+    }
+
+    @Override
+    public void setViewPagerFollowMyLocation(int i) {
+        index = i;
+        if (vpInstructions.getCurrentItem() != i) {
+            vpInstructions.setCurrentItem(i);
+
+        } else {
+
+        }
+    }
+
+
+    @Override
+    public void moveCameraFollowStep(List<Step> stepList, int index) {
         if (index > 0) {
             Step step = stepList.get(index - 1);
-            //addIcon(iconFactory, "Manh2", stepList.get(position - 1).getStartLocation().getCoordination());
             Double heading = SphericalUtil.computeHeading(step.getStartLocation().getCoordination()
                     , step.getEndLocation().getCoordination());
             updateCameraBearing(mMap, step.getEndLocation().getCoordination(), heading.floatValue());
+
+            if (this.index == index) {
+                vpInstructions.setBackgroundColor(Color.WHITE);
+            } else {
+                vpInstructions.setBackgroundColor(Color.GRAY);
+            }
         }
     }
 
     private void updateCameraBearing(GoogleMap googleMap, LatLng latLng, float bearing) {
-        if (googleMap == null) return;
         CameraPosition camPos = CameraPosition
                 .builder(
                         googleMap.getCameraPosition() // current Camera
@@ -190,7 +239,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
                 .target(latLng)
                 .bearing(bearing)
                 .tilt(45)
-                .zoom(18)
+                .zoom(19)
                 .build();
         googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
     }
@@ -241,14 +290,11 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
 
     void addMarkerFollowBounds(LatLngBounds bounds
             , HashMap<Integer, Marker> hmMarker, List<MarkerOptions> markerOptionsList) {
-
         for (int i = 0; i < markerOptionsList.size(); i++) {
             //If the item is within the the bounds of the screen
             if (bounds.contains(markerOptionsList.get(i).getPosition())) {
                 //If the item isn't already being displayed
                 if (!hmMarker.containsKey(i)) {
-                    //Add the Marker to the Map and keep track of it with the HashMap
-                    //getMarkerForItem just returns a MarkerOptions object
                     hmMarker.put(i, mMap.addMarker(markerOptionsList.get(i)));
                 }
             }
@@ -277,6 +323,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
                 super.onPreExecute();
             }
 
+            @NonNull
             @Override
             protected String doInBackground(LatLng... latLngs) {
                 try {
@@ -305,4 +352,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         task.execute(latlng);
     }
 
+    public void setListenLocation(MyLocationListener listenLocation) {
+        this.myLocationListener = listenLocation;
+    }
 }

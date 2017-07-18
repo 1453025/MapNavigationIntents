@@ -1,5 +1,7 @@
 package com.example.trangngo.mapnavigationintents.Navigation.Presenter;
 
+import android.location.Location;
+
 import com.akexorcist.googledirection.model.Step;
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.google.android.gms.maps.model.LatLng;
@@ -15,13 +17,19 @@ public interface PresenterToViewCallback {
 
     void drawNavigateDirection(List<LatLng> pointList, int i);
 
-    void changeCameraFollowStep(List<Step> stepList, int index);
+    void moveCameraFollowStep(List<Step> stepList, int index);
 
     void addMarkerVisibleToMap(List<MarkerOptions> arrowMarkerDirectionList,
                                List<MarkerOptions> nameMarkerStreetList,
                                List<MarkerOptions> timeMarkerList);
 
     void setAdapterViewInstructions(List<Instructions> intructionsList);
+
+    void moveMarkerFollowMyLocation(Location location);
+
+    void moveCameraFollowMyLocation(Location myLocation);
+
+    void setViewPagerFollowMyLocation(int i);
 
     interface OnRoute {
         void onInputFail();

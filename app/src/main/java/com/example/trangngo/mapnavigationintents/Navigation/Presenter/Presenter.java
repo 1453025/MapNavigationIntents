@@ -1,6 +1,7 @@
 package com.example.trangngo.mapnavigationintents.Navigation.Presenter;
 
 import android.content.Context;
+import android.location.Location;
 import android.util.Log;
 
 import com.akexorcist.googledirection.DirectionCallback;
@@ -10,12 +11,15 @@ import com.akexorcist.googledirection.model.Direction;
 import com.akexorcist.googledirection.model.Leg;
 import com.akexorcist.googledirection.model.Route;
 import com.akexorcist.googledirection.model.Step;
+import com.example.trangngo.mapnavigationintents.Navigation.fragment.listenerimplement.MyLocationListener;
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.example.trangngo.mapnavigationintents.Navigation.utils.MyUtils;
 import com.example.trangngo.mapnavigationintents.R;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 
@@ -29,17 +33,25 @@ import java.util.List;
 public class Presenter implements DirectionCallback {
     private static String TAG = "Presenter";
     IconGenerator iconFactory;
+
     private LatLng fromPosition;
     private LatLng toPosition;
+    private Location myLocation;
+    private boolean routeSuccess = false;
+
     private PresenterToViewCallback.OnRoute onRoute;
     private PresenterToViewCallback presenterCb;
+    private MyLocationListener myLocationListener;
     private Context context;
 
     private List<Step> stepList;
+    private List<PolylineOptions> polylineOptionsList;
     private List<Instructions> intructionsList;
     private List<MarkerOptions> arrowMarkerDirectionList;
     private List<MarkerOptions> nameMarkerStreetList;
     private List<MarkerOptions> timeMarkerList;
+
+    private boolean reCenter = true;
 
     public Presenter(PresenterToViewCallback.OnRoute onRoute, PresenterToViewCallback presenterCb,
                      Context context) {
@@ -54,11 +66,12 @@ public class Presenter implements DirectionCallback {
     }
 
     private void init() {
-        iconFactory = new IconGenerator(context);
         stepList = new ArrayList<>();
+        polylineOptionsList = new ArrayList<>();
         arrowMarkerDirectionList = new ArrayList<>();
         nameMarkerStreetList = new ArrayList<>();
         timeMarkerList = new ArrayList<>();
+        iconFactory = new IconGenerator(context);
     }
 
     public void route() {
@@ -86,6 +99,7 @@ public class Presenter implements DirectionCallback {
     public void onDirectionSuccess(Direction direction, String rawBody) {
 
         if (direction.isOK()) {
+            routeSuccess = true;
             onRoute.onEndRoute(true);
             //drawNavigateDirection(direction.getRouteList());
 
@@ -101,7 +115,11 @@ public class Presenter implements DirectionCallback {
                 presenterCb.setAdapterViewInstructions(intructionsList);
                 makeArrowMakerDirection();
                 for (int i = 0; i < leg.getStepList().size(); i++) {
-                    presenterCb.drawNavigateDirection(leg.getStepList().get(i).getPolyline().getPointList(), 0);
+                    presenterCb.drawNavigateDirection(
+                            leg.getStepList().get(i).getPolyline().getPointList(), 0);
+                    polylineOptionsList.add(new PolylineOptions().addAll(
+                            leg.getStepList().get(i).getPolyline().getPointList()));
+
                 }
             }
         } else {
@@ -116,13 +134,38 @@ public class Presenter implements DirectionCallback {
     }
 
     public void changeCameraFollowStep(int position) {
-        presenterCb.changeCameraFollowStep(stepList, position);
-
+        if (routeSuccess) {
+            presenterCb.moveCameraFollowStep(stepList, position);
+        }
     }
 
     public void addMarkerVisibleToMap() {
-        presenterCb.addMarkerVisibleToMap(arrowMarkerDirectionList, nameMarkerStreetList, timeMarkerList);
+        if (routeSuccess) {
+            presenterCb.addMarkerVisibleToMap(
+                    arrowMarkerDirectionList, nameMarkerStreetList, timeMarkerList);
+        }
     }
+
+    public void onRecenter() {
+        reCenter = true;
+        presenterCb.moveCameraFollowMyLocation(myLocation);
+    }
+
+    public void onLocationChange(Location location) {
+        this.myLocation = location;
+        presenterCb.moveMarkerFollowMyLocation(myLocation);
+
+        LatLng latLng = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+
+        if (reCenter) {
+            presenterCb.moveCameraFollowMyLocation(myLocation);
+            int i = myLocationIsOnPolyline(latLng);
+            if (i > -1) {
+                presenterCb.setViewPagerFollowMyLocation(i);
+            }
+        }
+    }
+
 
     public void makeArrowMakerDirection() {
 
@@ -172,5 +215,26 @@ public class Presenter implements DirectionCallback {
             }
 
         }
+    }
+
+    public void setMyLocationListener(MyLocationListener myLocationListener) {
+        this.myLocationListener = myLocationListener;
+        this.myLocationListener.setPresenter(this);
+    }
+
+    public void setRecenter(boolean recenter) {
+        this.reCenter = recenter;
+    }
+
+    public int myLocationIsOnPolyline(LatLng latLng) {
+        if (polylineOptionsList == null) {
+            return -1;
+        }
+        for (int i = 0; i < polylineOptionsList.size(); i++) {
+            if (PolyUtil.isLocationOnPath(latLng, polylineOptionsList.get(i).getPoints(), false, 10)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

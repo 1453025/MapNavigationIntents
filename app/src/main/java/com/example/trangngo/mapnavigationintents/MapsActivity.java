@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -24,8 +23,8 @@ import com.akexorcist.googledirection.model.Route;
 import com.akexorcist.googledirection.model.Step;
 import com.example.trangngo.mapnavigationintents.Navigation.adapter.InstructionsAdapter;
 import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.LatLngInterpolator;
-import com.example.trangngo.mapnavigationintents.Navigation.animatedmarker.MarkerAnimation;
 import com.example.trangngo.mapnavigationintents.Navigation.fragment.NavigationFragment;
+import com.example.trangngo.mapnavigationintents.Navigation.fragment.listenerimplement.MyLocationListener;
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
 import com.example.trangngo.mapnavigationintents.Navigation.utils.Key;
 import com.google.android.gms.common.ConnectionResult;
@@ -43,7 +42,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -51,8 +49,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.maps.android.PolyUtil;
-import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 
 import java.util.ArrayList;
@@ -72,6 +68,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LatLngInterpolator latLngInterpolator = new LatLngInterpolator.Spherical();
     IconGenerator iconFactory;
     List<MarkerOptions> markerOptionsList = new ArrayList<>();
+    //    private FloatingActionButton fabRecenter;
+//    private ViewPager vpInstructions;
+    MyLocationListener myLocationListener = new MyLocationListener();
     private LatLngBounds homePDD = new LatLngBounds(new LatLng(10.7651909, 106.6619211), new LatLng(10.7773018, 106.6999617));
     private GoogleApiClient mGoogleApiClient;
     private GoogleMap mMap;
@@ -79,10 +78,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private List<Polyline> polylineList;
     private LatLng myLatLng;
     private Location currentLcation;
-    private Location newLocation;
-    private Marker marker;
-    //    private FloatingActionButton fabRecenter;
-//    private ViewPager vpInstructions;
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -91,36 +86,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             currentLcation = intent.getParcelableExtra("location");
             myLatLng = new LatLng(latitude, longitude);
 
-            boolean isOnPath = false;
-            if (marker != null)
-                MarkerAnimation.animateMarkerToGB(marker, myLatLng, latLngInterpolator);
-            if (re_center) {
-                updateCameraBearing(mMap, myLatLng, currentLcation.getBearing());
-                for (int i = 0; i < polylineList.size(); i++) {
-                    if (PolyUtil.isLocationOnPath(myLatLng, polylineList.get(i).getPoints(), false, 10)) {
-//                        if (vpInstructions.getCurrentItem() != i)
-//                            vpInstructions.setCurrentItem(i);
-                        break;
-                    }
-                }
-            }
-
-            for (int i = 0; i < polylineList.size(); i++) {
-                if (PolyUtil.isLocationOnPath(myLatLng, polylineList.get(i).getPoints(), false, 50)) {
-                    //if(vpInstructions.getCurrentItem() != )
-                    //vpInstructions.setCurrentItem(i);
-                    isOnPath = true;
-                    break;
-                }
-            }
-
-            if (!isOnPath) {
-                Log.d(TAG, "false");
-            }
-
+            myLocationListener.onLocationChange(currentLcation);
 
         }
     };
+    private Location newLocation;
+    private Marker marker;
     private ArrayList<Marker> markerList;
     private List<LatLng> latLngList;
     private List<Step> stepList;
@@ -310,6 +281,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         NavigationFragment navigationFragment = NavigationFragment.getInstance();
                         navigationFragment.setArguments(bundle);
+                        navigationFragment.setListenLocation(myLocationListener);
                         getFragmentManager().beginTransaction()
                                 .add(R.id.fragment_navigation, navigationFragment, TAG_FRAGMENT)
                                 .addToBackStack(null)
@@ -319,7 +291,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
             break;
             case R.id.fab_start_navigation: {
-                startNavigation();
             }
             break;
             case R.id.fab_recenter:
@@ -327,22 +298,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 break;
             default:
                 break;
-        }
-    }
-
-    private void startNavigation() {
-        hideAllView();
-        showNavigationView();
-        List<Instructions> intructionsList = getInstructionsFromSteps(stepList);
-        setAdapterViewInstructions(intructionsList);
-        updateCameraBearing(mMap, myLatLng, currentLcation.getBearing());
-        // hide blue dot
-        if (ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_COARSE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED) {
-            mMap.setMyLocationEnabled(false);
         }
     }
 
@@ -426,30 +381,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void changeCameraPreview(int position) {
-        //addIcon(iconFactory, "Manh", stepList.get(position).getStartLocation().getCoordination());
-        if (position > 0) {
-            Step step = stepList.get(position - 1);
-            //addIcon(iconFactory, "Manh2", stepList.get(position - 1).getStartLocation().getCoordination());
-            Double heading = SphericalUtil.computeHeading(step.getStartLocation().getCoordination(), step.getEndLocation().getCoordination());
-            updateCameraBearing(mMap, step.getEndLocation().getCoordination(), heading.floatValue());
-        }
-    }
-
-    private void updateCameraBearing(GoogleMap googleMap, LatLng latLng, float bearing) {
-        if (googleMap == null) return;
-        CameraPosition camPos = CameraPosition
-                .builder(
-                        googleMap.getCameraPosition() // current Camera
-                )
-                .target(latLng)
-                .bearing(bearing)
-                .tilt(45)
-                .zoom(18)
-                .build();
-        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
-    }
-
     @Override
     public void onCameraMove() {
         showVisibleMarker();
@@ -461,40 +392,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     //Your "Item" class will need at least a unique id, latitude and longitude.
-
-
-    class ShowMarker extends AsyncTask<LatLngBounds, Integer, Void> {
-
-        @Override
-        protected void onPreExecute() {
-            for (Marker marker : markerList) {
-                marker.remove();
-            }
-            markerList.clear();
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            markerList.add(mMap.addMarker(markerOptionsList.get(values[0])));
-        }
-
-        @Override
-        protected Void doInBackground(LatLngBounds... latLngBounds) {
-
-            for (int i = 0; i < markerOptionsList.size(); i++) {
-                //If the item is within the the bounds of the screen
-                if (latLngBounds[0].contains(markerOptionsList.get(i).getPosition())) {
-                    //If the item isn't already being displayed
-                    publishProgress(i);
-
-                }
-                //If the marker is off screen
-            }
-
-
-            return null;
-        }
-    }
 
 }
 
