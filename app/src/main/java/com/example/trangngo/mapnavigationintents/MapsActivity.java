@@ -43,7 +43,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -345,48 +344,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(false);
         }
-
-        drawArrowMarkerOnDirection(mMap, markerList);
-    }
-
-    private void drawArrowMarkerOnDirection(GoogleMap googleMap, List<Marker> markers) {
-
-        LatLng tailLatLng;
-        LatLng headLatLng;
-        Double heading;
-        MarkerOptions markerOptions;
-        for (Step step : stepList) {
-            int size = step.getPolyline().getPointList().size();
-            if (size > 1) {
-                tailLatLng = step.getPolyline().getPointList().get(0);
-                headLatLng = step.getPolyline().getPointList().get(1);
-                heading = SphericalUtil.computeHeading(tailLatLng, headLatLng);
-                markerOptions = new MarkerOptions()
-                        .position(tailLatLng)
-                        .flat(true)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_arrow_polyline))
-                        .anchor(0.5f, 0.5f)
-                        .rotation(heading.floatValue() - 90);
-                markerOptionsList.add(markerOptions);
-                if (size > 3) {
-                    if (Integer.parseInt(step.getDistance().getValue()) > 100) {
-                        int midle = size / 2;
-                        if (midle > 1) {
-                            tailLatLng = step.getPolyline().getPointList().get(midle);
-                            headLatLng = step.getPolyline().getPointList().get(midle + 1);
-                            heading = SphericalUtil.computeHeading(tailLatLng, headLatLng);
-                            markerOptions = new MarkerOptions()
-                                    .position(tailLatLng)
-                                    .flat(true)
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_arrow_polyline))
-                                    .anchor(0.5f, 0.5f)
-                                    .rotation(heading.floatValue() - 90);
-                            markerOptionsList.add(markerOptions);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private void setAdapterViewInstructions(List<Instructions> intructionsList) {
@@ -470,10 +427,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void changeCameraPreview(int position) {
-        addIcon(iconFactory, "Manh", stepList.get(position).getStartLocation().getCoordination());
+        //addIcon(iconFactory, "Manh", stepList.get(position).getStartLocation().getCoordination());
         if (position > 0) {
             Step step = stepList.get(position - 1);
-            addIcon(iconFactory, "Manh2", stepList.get(position - 1).getStartLocation().getCoordination());
+            //addIcon(iconFactory, "Manh2", stepList.get(position - 1).getStartLocation().getCoordination());
             Double heading = SphericalUtil.computeHeading(step.getStartLocation().getCoordination(), step.getEndLocation().getCoordination());
             updateCameraBearing(mMap, step.getEndLocation().getCoordination(), heading.floatValue());
         }
@@ -493,14 +450,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
     }
 
-    private void addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {
-        MarkerOptions markerOptions = new MarkerOptions().
-                icon(BitmapDescriptorFactory.fromBitmap(iconFactory.makeIcon(text))).
-                position(position).
-                anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV());
-        mMap.addMarker(markerOptions);
-    }
-
     @Override
     public void onCameraMove() {
         showVisibleMarker();
@@ -509,39 +458,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void showVisibleMarker() {
         LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
         //new ShowMarker().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, bounds);
-        addItemsToMap(markerOptionsList);
     }
 
     //Your "Item" class will need at least a unique id, latitude and longitude.
-    private void addItemsToMap(List<MarkerOptions> markerOptionsList) {
-        if (this.mMap != null) {
-            //This is the current user-viewable region of the map
-            LatLngBounds bounds = this.mMap.getProjection().getVisibleRegion().latLngBounds;
-
-            //Loop through all the items that are available to be placed on the map
-            for (int i = 0; i < markerOptionsList.size(); i++) {
-                //If the item is within the the bounds of the screen
-                if (bounds.contains(markerOptionsList.get(i).getPosition())) {
-                    //If the item isn't already being displayed
-                    if (!visibleMarkers.containsKey(i)) {
-                        //Add the Marker to the Map and keep track of it with the HashMap
-                        //getMarkerForItem just returns a MarkerOptions object
-                        this.visibleMarkers.put(i, this.mMap.addMarker(markerOptionsList.get(i)));
-                    }
-                }
-                //If the marker is off screen
-                else {
-                    //If the course was previously on screen
-                    if (visibleMarkers.containsKey(i)) {
-                        //1. Remove the Marker from the GoogleMap
-                        visibleMarkers.get(i).remove();
-                        //2. Remove the reference to the Marker from the HashMap
-                        visibleMarkers.remove(i);
-                    }
-                }
-            }
-        }
-    }
 
 
     class ShowMarker extends AsyncTask<LatLngBounds, Integer, Void> {
