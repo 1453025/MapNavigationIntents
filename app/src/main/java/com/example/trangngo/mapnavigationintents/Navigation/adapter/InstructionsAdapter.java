@@ -43,12 +43,10 @@ public class InstructionsAdapter extends PagerAdapter {
     public Object instantiateItem(ViewGroup container, int position) {
         View view = layoutInflater.inflate(R.layout.item_instructions, container, false);
 
-        TextView tvManeuver = (TextView) view.findViewById(R.id.tvManeuver);
         TextView tvDistance = (TextView) view.findViewById(R.id.tvDistance);
         TextView tvInstructions = (TextView) view.findViewById(R.id.tvInstruction);
 
         Instructions instructions = instructionsList.get(position);
-        tvManeuver.setText(instructions.getManeuver());
         tvDistance.setText(instructions.getDistance());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             tvInstructions.setText(Html.fromHtml(instructions.getInstructions(), Html.FROM_HTML_MODE_COMPACT));
@@ -64,5 +62,10 @@ public class InstructionsAdapter extends PagerAdapter {
     @Override
     public void destroyItem(ViewGroup container, int position, Object object) {
         container.removeView((View) object);
+    }
+
+    @Override
+    public int getItemPosition(Object object) {
+        return super.getItemPosition(object);
     }
 }

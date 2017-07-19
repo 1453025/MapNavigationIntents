@@ -1,7 +1,12 @@
 package com.example.trangngo.mapnavigationintents.Navigation.Presenter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
+import android.os.AsyncTask;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.akexorcist.googledirection.DirectionCallback;
@@ -23,15 +28,17 @@ import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by trangngo on 7/13/17.
  */
 
 public class Presenter implements DirectionCallback {
-    private static String TAG = "Presenter";
+    private String TAG = "Presenter";
     private IconGenerator iconFactory;
 
     private LatLng fromPosition;
@@ -90,7 +97,7 @@ public class Presenter implements DirectionCallback {
         GoogleDirection.withServerKey("AIzaSyA8FkLNAIyrX6xTkytf05cbKsnaOeOglso")
                 .from(fromPosition)
                 .to(toPosition)
-                .language(Language.VIETNAMESE)
+                .language(Language.ENGLISH)
                 .alternativeRoute(true)
                 .execute(this);
     }
@@ -103,11 +110,7 @@ public class Presenter implements DirectionCallback {
             onRoute.onEndRoute(true);
 
             init();
-            for (Route route : direction.getRouteList()) {
-                List<Leg> leg = route.getLegList();
-            }
             Route route = direction.getRouteList().get(0);
-            List<Leg> legs = route.getLegList();
             for (Leg leg : route.getLegList()) {
                 stepList = leg.getStepList();
                 intructionsList = MyUtils.getInstructionsFromSteps(stepList);
@@ -125,7 +128,6 @@ public class Presenter implements DirectionCallback {
             onRoute.onEndRoute(false);
         }
     }
-
 
     @Override
     public void onDirectionFailure(Throwable t) {
@@ -151,20 +153,51 @@ public class Presenter implements DirectionCallback {
     }
 
     public void onLocationChange(Location location) {
+        if (location == null) {
+            return;
+        }
         this.myLocation = location;
         presenterCb.moveMarkerFollowMyLocation(myLocation);
 
         LatLng latLng = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
 
+        int position = myLocationIsOnPolyline(latLng);
+
+        updateDistanceASinglePolyline(position);
         if (reCenter) {
             presenterCb.moveCameraFollowMyLocation(myLocation);
-            int i = myLocationIsOnPolyline(latLng);
-            if (i > -1) {
-                presenterCb.setViewPagerFollowMyLocation(i);
+
+            if (position > -1) {
+                presenterCb.setViewPagerFollowMyLocation(position);
             }
         }
+
     }
 
+    public void setMyLocationListener(MyLocationListener myLocationListener) {
+        this.myLocationListener = myLocationListener;
+        this.myLocationListener.setPresenter(this);
+    }
+
+    public void setRecenterFalse() {
+        this.reCenter = false;
+    }
+
+    public void changeColorViewPager(int position) {
+        presenterCb.changeColorViewPager(position);
+    }
+
+    private int myLocationIsOnPolyline(LatLng latLng) {
+        if (polylineOptionsList == null) {
+            return -1;
+        }
+        for (int i = 0; i < polylineOptionsList.size(); i++) {
+            if (PolyUtil.isLocationOnPath(latLng, polylineOptionsList.get(i).getPoints(), false, 10)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     private void makeArrowMakerDirection() {
 
@@ -202,10 +235,7 @@ public class Presenter implements DirectionCallback {
                             arrowMarkerDirectionList.add(markerOptions);
 
                             nameMarkerStreetList.add(new MarkerOptions().position(headLatLng)
-                                    .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV())
-                                    .icon(BitmapDescriptorFactory
-                                            .fromBitmap(iconFactory.makeIcon(
-                                                    MyUtils.getNameAddressFromLatLng(context, headLatLng.latitude, headLatLng.longitude)))));
+                                    .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
                         }
                     }
                 }
@@ -215,32 +245,66 @@ public class Presenter implements DirectionCallback {
                                 .fromBitmap(iconFactory.makeIcon(step.getDuration().getText())))
                         .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
             }
-
         }
+        getNameAddressFromLatLng();
     }
 
-    public void setMyLocationListener(MyLocationListener myLocationListener) {
-        this.myLocationListener = myLocationListener;
-        this.myLocationListener.setPresenter(this);
+    // get name for marker in polyline
+    private void getNameAddressFromLatLng() {
+        MarkerOptions[] markerOptionsArr = nameMarkerStreetList.toArray(
+                new MarkerOptions[nameMarkerStreetList.size()]);
+
+        final Geocoder geocoder;
+        geocoder = new Geocoder(context, Locale.getDefault());
+
+        @SuppressLint("StaticFieldLeak") AsyncTask<MarkerOptions, Void, Void> task =
+                new AsyncTask<MarkerOptions, Void, Void>() {
+
+                    @NonNull
+                    @Override
+                    protected Void doInBackground(MarkerOptions... markerOptions) {
+                        try {
+                            for (int i = 0; i < markerOptions.length; i++) {
+                                List<Address> addresses = geocoder.getFromLocation(
+                                        markerOptions[i].getPosition().latitude,
+                                        markerOptions[i].getPosition().longitude, 1);
+                                if (!addresses.isEmpty()) {
+                                    try {
+                                        nameMarkerStreetList.get(i)
+                                                .icon(BitmapDescriptorFactory
+                                                        .fromBitmap(iconFactory.makeIcon(
+                                                                addresses.get(0).getAddressLine(0))));
+                                    } catch (Exception e) {
+                                        nameMarkerStreetList.get(i)
+                                                .icon(BitmapDescriptorFactory
+                                                        .fromBitmap(iconFactory.makeIcon("Unknown")));
+                                    }
+                                }
+                            }
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        return null;
+                    }
+                };
+        task.execute(markerOptionsArr);
     }
 
-    public void setRecenterFalse() {
-        this.reCenter = false;
-    }
+    // update distance from my location to end polyline
+    private void updateDistanceASinglePolyline(int position) {
 
-    private int myLocationIsOnPolyline(LatLng latLng) {
-        if (polylineOptionsList == null) {
-            return -1;
+        if (position < 0 || myLocation == null || polylineOptionsList == null || intructionsList == null) {
+            return;
         }
-        for (int i = 0; i < polylineOptionsList.size(); i++) {
-            if (PolyUtil.isLocationOnPath(latLng, polylineOptionsList.get(i).getPoints(), false, 10)) {
-                return i;
-            }
-        }
-        return -1;
-    }
+        LatLng latLngFrom = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
+        LatLng latLngTo = polylineOptionsList.get(position).getPoints()
+                .get(polylineOptionsList.get(position).getPoints().size() - 1);
+        double distance = SphericalUtil.computeDistanceBetween(latLngFrom, latLngTo);
 
-    public void changeColorViewPager(int position) {
-        presenterCb.changeColorViewPager(position);
+        Log.d(TAG, "updateDistanceASinglePolyline: distance" + distance);
+        //intructionsList.get(position).setDistance(String.valueOf(distance));
+        presenterCb.notifySetChangeAdapter(distance);
     }
 }

@@ -29,15 +29,23 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PatternItem;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -59,7 +67,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     IconGenerator iconGenerator;
     MyLocationListener myLocationListener;
     LatLngInterpolator latLngInterpolator;
-    int index = -1;
+    int index = 0;
     private Marker myLocationMarker;
     private HashMap<Integer, Marker> arrowMarkerDirection;
     private HashMap<Integer, Marker> nameMarkerStreet;
@@ -68,8 +76,10 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     private LatLngBounds homePDD = new LatLngBounds(
             new LatLng(10.7651909, 106.6619211),
             new LatLng(10.7773018, 106.6999617));
+
     private FloatingActionButton fabRecenter;
     private ViewPager vpInstructions;
+    private InstructionsAdapter insAdapter;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -145,14 +155,22 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         int colorIndex = i % COLORS.length;
         PolylineOptions polylineOptions = new PolylineOptions();
         polylineOptions.color(getResources().getColor(COLORS[colorIndex]));
-        polylineOptions.width(10 + i * 3);
+        polylineOptions.width(25);
         polylineOptions.addAll(pointList);
-        mMap.addPolyline(polylineOptions);
+        Polyline polyline = mMap.addPolyline(polylineOptions);
+        List<PatternItem> pattern = Arrays.asList(
+                new Dot(), new Gap(20), new Dash(30), new Gap(20));
+        //polyline.setPattern(pattern);
+//        polyline.setStartCap(new CustomCap(BitmapDescriptorFactory.fromResource(R.drawable.ic_arrow_down),
+//                20));
+        polyline.setEndCap(new ButtCap());
+        polyline.setJointType(JointType.ROUND);
     }
 
     @Override
     public void setAdapterViewInstructions(List<Instructions> intructionsList) {
-        InstructionsAdapter insAdapter = new InstructionsAdapter(getActivity(), intructionsList);
+
+        insAdapter = new InstructionsAdapter(getActivity(), intructionsList);
         vpInstructions.setAdapter(insAdapter);
 
     }
@@ -160,12 +178,16 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
     @Override
     public void moveMarkerFollowMyLocation(Location location) {
 
+        if (location == null) {
+            return;
+        }
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         if (myLocationMarker == null) {
             myLocationMarker = mMap.addMarker(new MarkerOptions().position(latLng)
                     .flat(true)
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
                     .anchor(0.5f, 0.5f));
+            myLocationMarker.setZIndex(99);
         }
         myLocationMarker.setRotation(location.getBearing());
         MarkerAnimation.animateMarkerToGB(myLocationMarker, latLng, latLngInterpolator);
@@ -197,6 +219,10 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         }
     }
 
+    @Override
+    public void notifySetChangeAdapter(double intructionsList) {
+    }
+
 
     @Override
     public void moveCameraFollowStep(List<Step> stepList, int position) {
@@ -208,19 +234,6 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         }
     }
 
-    private void updateCameraBearing(GoogleMap googleMap, LatLng latLng, float bearing) {
-        CameraPosition camPos = CameraPosition
-                .builder(
-                        googleMap.getCameraPosition() // current Camera
-                )
-                .target(latLng)
-                .bearing(bearing)
-                .tilt(45)
-                .zoom(18)
-                .build();
-        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
-    }
-
     @Override
     public void addMarkerVisibleToMap(List<MarkerOptions> arrowMarkerDirectionList,
                                       List<MarkerOptions> nameMarkerStreetList,
@@ -229,36 +242,9 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         LatLngBounds bounds = this.mMap.getProjection().getVisibleRegion().latLngBounds;
 
 
-        addMarkerFollowBounds(bounds, arrowMarkerDirection, arrowMarkerDirectionList);
-        addMarkerNameFollowBounds(bounds, nameMarkerStreet, nameMarkerStreetList);
+        //addMarkerFollowBounds(bounds, arrowMarkerDirection, arrowMarkerDirectionList);
+        addMarkerFollowBounds(bounds, nameMarkerStreet, nameMarkerStreetList);
         addMarkerFollowBounds(bounds, timeMarker, timeMarkerList);
-
-    }
-
-    private void addMarkerNameFollowBounds(LatLngBounds bounds
-            , HashMap<Integer, Marker> nameMarkerStreet, List<MarkerOptions> nameMarkerStreetList) {
-
-        for (int i = 0; i < nameMarkerStreetList.size(); i++) {
-            //If the item is within the the bounds of the screen
-            if (bounds.contains(nameMarkerStreetList.get(i).getPosition())) {
-                //If the item isn't already being displayed
-                if (!nameMarkerStreet.containsKey(i)) {
-                    //Add the Marker to the Map and keep track of it with the HashMap
-                    //getMarkerForItem just returns a MarkerOptions object
-                    nameMarkerStreet.put(i, mMap.addMarker(nameMarkerStreetList.get(i)));
-                }
-            }
-            //If the marker is off screen
-            else {
-                //If the course was previously on screen
-                if (nameMarkerStreet.containsKey(i)) {
-                    //1. Remove the Marker from the GoogleMap
-                    nameMarkerStreet.get(i).remove();
-                    //2. Remove the reference to the Marker from the HashMap
-                    nameMarkerStreet.remove(i);
-                }
-            }
-        }
 
     }
 
@@ -269,7 +255,9 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
             if (bounds.contains(markerOptionsList.get(i).getPosition())) {
                 //If the item isn't already being displayed
                 if (!hmMarker.containsKey(i)) {
-                    hmMarker.put(i, mMap.addMarker(markerOptionsList.get(i)));
+                    Marker marker = mMap.addMarker(markerOptionsList.get(i));
+                    marker.setZIndex(1);
+                    hmMarker.put(i, marker);
                 }
             }
             //If the marker is off screen
@@ -287,5 +275,18 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
 
     public void setListenLocation(MyLocationListener listenLocation) {
         this.myLocationListener = listenLocation;
+    }
+
+    private void updateCameraBearing(GoogleMap googleMap, LatLng latLng, float bearing) {
+        CameraPosition camPos = CameraPosition
+                .builder(
+                        googleMap.getCameraPosition() // current Camera
+                )
+                .target(latLng)
+                .bearing(bearing)
+                .tilt(45)
+                .zoom(18)
+                .build();
+        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(camPos));
     }
 }

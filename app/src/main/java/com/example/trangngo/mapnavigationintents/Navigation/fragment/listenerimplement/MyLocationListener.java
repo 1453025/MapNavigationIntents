@@ -23,7 +23,8 @@ public class MyLocationListener implements ListenLocationChange {
         if (presenter == null) {
             return;
         }
-        presenter.onLocationChange(location);
-
+        if (location != null) {
+            presenter.onLocationChange(location);
+        }
     }
 }
