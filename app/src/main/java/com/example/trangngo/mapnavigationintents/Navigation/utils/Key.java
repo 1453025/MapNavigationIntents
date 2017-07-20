@@ -7,4 +7,5 @@ package com.example.trangngo.mapnavigationintents.Navigation.utils;
 public class Key {
     public static String FROM_POSITION = "from_position";
     public static String TO_POSITION = "to_position";
+    public static String DISTANCETAG = "distance_tag";
 }

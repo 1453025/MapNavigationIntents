@@ -33,7 +33,7 @@ public interface PresenterToViewCallback {
 
     void changeColorViewPager(int position);
 
-    void notifySetChangeAdapter(double intructionsList);
+    void notifySetChangeAdapter(int data, int index);
 
     interface OnRoute {
         void onInputFail();

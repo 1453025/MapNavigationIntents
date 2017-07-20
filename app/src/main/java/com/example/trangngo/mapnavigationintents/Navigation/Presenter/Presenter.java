@@ -23,6 +23,7 @@ import com.example.trangngo.mapnavigationintents.R;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
@@ -57,6 +58,7 @@ public class Presenter implements DirectionCallback {
     private List<MarkerOptions> arrowMarkerDirectionList;
     private List<MarkerOptions> nameMarkerStreetList;
     private List<MarkerOptions> timeMarkerList;
+    private List<MarkerOptions> instructionMarkerList; // put in tail of the polyline
 
     private boolean reCenter = true;
 
@@ -78,6 +80,7 @@ public class Presenter implements DirectionCallback {
         arrowMarkerDirectionList = new ArrayList<>();
         nameMarkerStreetList = new ArrayList<>();
         timeMarkerList = new ArrayList<>();
+        instructionMarkerList = new ArrayList<>();
         iconFactory = new IconGenerator(context);
     }
 
@@ -97,7 +100,7 @@ public class Presenter implements DirectionCallback {
         GoogleDirection.withServerKey("AIzaSyA8FkLNAIyrX6xTkytf05cbKsnaOeOglso")
                 .from(fromPosition)
                 .to(toPosition)
-                .language(Language.ENGLISH)
+                .language(Language.VIETNAMESE)
                 .alternativeRoute(true)
                 .execute(this);
     }
@@ -143,7 +146,7 @@ public class Presenter implements DirectionCallback {
     public void addMarkerVisibleToMap() {
         if (routeSuccess) {
             presenterCb.addMarkerVisibleToMap(
-                    arrowMarkerDirectionList, nameMarkerStreetList, timeMarkerList);
+                    arrowMarkerDirectionList, nameMarkerStreetList, instructionMarkerList);
         }
     }
 
@@ -199,6 +202,7 @@ public class Presenter implements DirectionCallback {
         return -1;
     }
 
+    //get marker to show on polyline
     private void makeArrowMakerDirection() {
 
         LatLng tailLatLng;
@@ -207,6 +211,12 @@ public class Presenter implements DirectionCallback {
         MarkerOptions markerOptions;
         for (Step step : stepList) {
             int size = step.getPolyline().getPointList().size();
+            tailLatLng = step.getPolyline().getPointList().get(0);
+            instructionMarkerList.add(new MarkerOptions()
+                    .position(tailLatLng)
+                    .icon(BitmapDescriptorFactory
+                            .fromBitmap(iconFactory.makeIcon(step.getManeuver())))
+                    .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV()));
 
             if (size > 1) {
                 tailLatLng = step.getPolyline().getPointList().get(0);
@@ -301,10 +311,21 @@ public class Presenter implements DirectionCallback {
         LatLng latLngFrom = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
         LatLng latLngTo = polylineOptionsList.get(position).getPoints()
                 .get(polylineOptionsList.get(position).getPoints().size() - 1);
-        double distance = SphericalUtil.computeDistanceBetween(latLngFrom, latLngTo);
-
-        Log.d(TAG, "updateDistanceASinglePolyline: distance" + distance);
-        //intructionsList.get(position).setDistance(String.valueOf(distance));
-        presenterCb.notifySetChangeAdapter(distance);
+        int distance = (int) SphericalUtil.computeDistanceBetween(latLngFrom, latLngTo);
+        presenterCb.notifySetChangeAdapter(distance, position);
     }
+
+    private int isRoundaboutPolyline(Polyline polyline) {
+        int limitLenght = 50;
+        List<LatLng> latLngList = polyline.getPoints();
+        if (latLngList == null) {
+            return -1;
+        }
+        for (int i = 0; i < latLngList.size(); i++) {
+
+        }
+
+        return 0;
+    }
+
 }

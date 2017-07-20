@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.example.trangngo.mapnavigationintents.Navigation.model.Instructions;
+import com.example.trangngo.mapnavigationintents.Navigation.utils.Key;
 import com.example.trangngo.mapnavigationintents.R;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class InstructionsAdapter extends PagerAdapter {
         View view = layoutInflater.inflate(R.layout.item_instructions, container, false);
 
         TextView tvDistance = (TextView) view.findViewById(R.id.tvDistance);
+        tvDistance.setTag(Key.DISTANCETAG + position);
         TextView tvInstructions = (TextView) view.findViewById(R.id.tvInstruction);
 
         Instructions instructions = instructionsList.get(position);

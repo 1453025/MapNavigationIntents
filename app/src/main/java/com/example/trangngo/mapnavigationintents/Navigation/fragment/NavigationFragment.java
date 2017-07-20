@@ -1,5 +1,6 @@
 package com.example.trangngo.mapnavigationintents.Navigation.fragment;
 
+import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.location.Location;
@@ -12,6 +13,7 @@ import android.support.v4.view.ViewPager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.akexorcist.googledirection.model.Step;
 import com.example.trangngo.mapnavigationintents.Navigation.Presenter.Presenter;
@@ -185,7 +187,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         if (myLocationMarker == null) {
             myLocationMarker = mMap.addMarker(new MarkerOptions().position(latLng)
                     .flat(true)
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_direction_arrows))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_car_black))
                     .anchor(0.5f, 0.5f));
             myLocationMarker.setZIndex(99);
         }
@@ -219,8 +221,14 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         }
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
-    public void notifySetChangeAdapter(double intructionsList) {
+    public void notifySetChangeAdapter(int data, int index) {
+        TextView view = (TextView) vpInstructions.findViewWithTag(Key.DISTANCETAG + index);
+        if (view == null) {
+            return;
+        }
+        view.setText(String.valueOf(data) + "m");
     }
 
 
@@ -230,7 +238,7 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
             Step step = stepList.get(position);
             Double heading = SphericalUtil.computeHeading(step.getStartLocation().getCoordination()
                     , step.getEndLocation().getCoordination());
-            updateCameraBearing(mMap, step.getEndLocation().getCoordination(), heading.floatValue());
+            updateCameraBearing(mMap, step.getStartLocation().getCoordination(), heading.floatValue());
         }
     }
 
