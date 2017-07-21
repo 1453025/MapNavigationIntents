@@ -35,6 +35,8 @@ public interface PresenterToViewCallback {
 
     void notifySetChangeAdapter(int data, int index);
 
+    void exportInformation(int distance);
+
     interface OnRoute {
         void onInputFail();
 

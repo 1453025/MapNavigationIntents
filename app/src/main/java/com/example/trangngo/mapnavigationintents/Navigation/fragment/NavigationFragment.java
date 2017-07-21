@@ -101,8 +101,8 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
         }
         listenerImplement = new ListenerImplement(presenter);
         LatLng fromPosition = getArguments().getParcelable(Key.FROM_POSITION);
-        //LatLng toPosition = getArguments().getParcelable(Key.TO_POSITION);
-        LatLng toPosition = new LatLng(10.7773018, 106.6999617);
+        LatLng toPosition = getArguments().getParcelable(Key.TO_POSITION);
+        //LatLng toPosition = new LatLng(10.7773018, 106.6999617);
         presenter.setFromToPosition(fromPosition, toPosition);
     }
 
@@ -229,6 +229,11 @@ public class NavigationFragment extends Fragment implements OnMapReadyCallback,
             return;
         }
         view.setText(String.valueOf(data) + "m");
+    }
+
+    @Override
+    public void exportInformation(int distance) {
+
     }
 
 

@@ -60,6 +60,7 @@ public class Presenter implements DirectionCallback {
     private List<MarkerOptions> timeMarkerList;
     private List<MarkerOptions> instructionMarkerList; // put in tail of the polyline
 
+
     private boolean reCenter = true;
 
     public Presenter(PresenterToViewCallback.OnRoute onRoute, PresenterToViewCallback presenterCb,
@@ -312,6 +313,7 @@ public class Presenter implements DirectionCallback {
         LatLng latLngTo = polylineOptionsList.get(position).getPoints()
                 .get(polylineOptionsList.get(position).getPoints().size() - 1);
         int distance = (int) SphericalUtil.computeDistanceBetween(latLngFrom, latLngTo);
+
         presenterCb.notifySetChangeAdapter(distance, position);
     }
 
